@@ -701,18 +701,31 @@ function drawBackground() {
 }
 
 function drawHUD() {
-  const bx = 24,
-    by = 22,
-    barW = 250,
-    barH = 18;
   ctx.save();
+  drawHealthBar();
+  drawFlightTimer();
+  drawScorePanel();
+  drawTimeStopBar();
+  drawCombo();
+  drawMessage();
+  ctx.restore();
+}
+
+// 左上角：10 格精神状态，挨打时抖一下、闪一下
+function drawHealthBar() {
+  const bx = 24;
+  const by = 22;
+  const barW = 250;
+  const barH = 18;
+  const inset = 3;
+  const innerW = barW - inset * 2;
 
   const t = state.tank;
   const hp = t ? t.hp : 10;
   const fill = hp <= 3 ? '#b5736a' : hp <= 5 ? '#c9a86a' : '#7d9a7b';
-
-  // 挨打时血条会抖一下、闪一下
   const flash = state.hpFlash > 0 ? state.hpFlash / 26 : 0;
+  const ratio = clamp(hp / 10, 0, 1);
+
   ctx.save();
   if (flash > 0) ctx.translate(rand(-3, 3) * flash, rand(-2, 2) * flash);
 
@@ -720,27 +733,20 @@ function drawHUD() {
   ctx.lineWidth = 2.4 + flash * 1.8;
   sketchStroke(ctx, bx, by, barW, barH, 1.6);
 
-  const inset = 3;
-  const ratio = clamp(hp / 10, 0, 1);
   if (ratio > 0) {
     ctx.fillStyle = fill;
-    ctx.fillRect(bx + inset, by + inset, (barW - inset * 2) * ratio, barH - inset * 2);
+    ctx.fillRect(bx + inset, by + inset, innerW * ratio, barH - inset * 2);
   }
 
-  // 掉血瞬间整条盖一层白，损失的那一段单独标红
+  // 掉血瞬间：整条白闪一下，损失的那段标红
   if (flash > 0) {
     ctx.fillStyle = `rgba(255,255,255,${0.45 * flash})`;
-    ctx.fillRect(bx + inset, by + inset, (barW - inset * 2) * ratio, barH - inset * 2);
+    ctx.fillRect(bx + inset, by + inset, innerW * ratio, barH - inset * 2);
 
     const lost = state.hpPop ? state.hpPop.n / 10 : 0;
     if (lost > 0) {
       ctx.fillStyle = `rgba(181,115,106,${0.9 * flash})`;
-      ctx.fillRect(
-        bx + inset + (barW - inset * 2) * ratio,
-        by + inset,
-        (barW - inset * 2) * lost,
-        barH - inset * 2
-      );
+      ctx.fillRect(bx + inset + innerW * ratio, by + inset, innerW * lost, barH - inset * 2);
     }
   }
   ctx.restore();
@@ -752,62 +758,77 @@ function drawHUD() {
     const k = state.hpPop.life / state.hpPop.max;
     ctx.save();
     ctx.globalAlpha = k;
-    const dy = (1 - k) * 26;
-    handText(ctx, `-${state.hpPop.n}`, bx + barW + 18, by + 14 - dy, 20, '#b5736a', 'left');
+    handText(
+      ctx,
+      `-${state.hpPop.n}`,
+      bx + barW + 18,
+      by + 14 - (1 - k) * 26,
+      20,
+      '#b5736a',
+      'left'
+    );
     ctx.restore();
   }
+}
 
-  if (t && t.flying) {
-    const fr = clamp(t.flyTimer / FLY_FRAMES, 0, 1);
-    ctx.strokeStyle = '#8a6a5a';
-    ctx.lineWidth = 2;
-    const fw = 150;
-    sketchStroke(ctx, bx, by + barH + 28, fw, 8, 1.2);
-    ctx.fillStyle = '#d8b48f';
-    ctx.fillRect(bx + 2, by + barH + 30, (fw - 4) * fr, 4);
-    handText(ctx, '画饼升天中', bx + fw + 10, by + barH + 32, 13, '#8a6a5a', 'left');
-  }
+// 血条下面那条：画饼升天的剩余时间
+function drawFlightTimer() {
+  const t = state.tank;
+  if (!t || !t.flying) return;
 
+  const bx = 24;
+  const y = 22 + 18 + 28;
+  const fw = 150;
+  const fr = clamp(t.flyTimer / FLY_FRAMES, 0, 1);
+
+  ctx.strokeStyle = '#8a6a5a';
+  ctx.lineWidth = 2;
+  sketchStroke(ctx, bx, y, fw, 8, 1.2);
+  ctx.fillStyle = '#d8b48f';
+  ctx.fillRect(bx + 2, y + 2, (fw - 4) * fr, 4);
+  handText(ctx, '画饼升天中', bx + fw + 10, y + 4, 13, '#8a6a5a', 'left');
+}
+
+// 右上角：倒计时、分数、击杀数
+function drawScorePanel() {
   const secs = Math.ceil(state.timeLeft);
   const phaseTag = state.phase === 3 ? '（冲刺）' : '';
-  handText(ctx, `还有 ${secs} 秒下班${phaseTag}`, W - 24, by + 2, 20, '#222', 'right');
-  handText(
-    ctx,
-    `分数 ${state.score}　干掉 ${state.kills} 个`,
-    W - 24,
-    by + 28,
-    15,
-    '#666',
-    'right'
-  );
 
-  if (state.timeStop > 0) {
-    const fr = clamp(state.timeStop / TIME_STOP_FRAMES, 0, 1);
-    ctx.strokeStyle = '#4a6a8a';
-    ctx.lineWidth = 2;
-    sketchStroke(ctx, W / 2 - 90, 66, 180, 8, 1.2);
-    ctx.fillStyle = '#9db8cc';
-    ctx.fillRect(W / 2 - 88, 68, 176 * fr, 4);
-    handText(ctx, '年假中 · 时间停止', W / 2, 88, 14, '#4a6a8a', 'center');
-  }
+  handText(ctx, `还有 ${secs} 秒下班${phaseTag}`, W - 24, 24, 20, '#222', 'right');
+  handText(ctx, `分数 ${state.score}　干掉 ${state.kills} 个`, W - 24, 50, 15, '#666', 'right');
+}
 
-  // 连击：靠近坦克上方弹出，带一下放大
-  if (state.combo >= 2) {
-    const pop = state.comboPop > 0 ? 1 + (state.comboPop / 12) * 0.45 : 1;
-    const mult = comboMultiplier();
-    ctx.save();
-    const cx = t ? t.x : W / 2;
-    const cy = t ? Math.max(t.y - 62, 96) : 470;
-    ctx.translate(cx, cy);
-    ctx.scale(pop, pop);
-    handText(ctx, `${state.combo} 连击`, 0, 0, 18, '#b5736a', 'center');
-    if (mult > 1) handText(ctx, `×${mult}`, 0, -24, 15, '#c9a86a', 'center');
-    ctx.restore();
-  }
+// 顶部中间：年假的时间停止进度
+function drawTimeStopBar() {
+  if (state.timeStop <= 0) return;
 
-  if (state.message) handText(ctx, state.message, W / 2, 44, 18, '#6d8a6d', 'center');
+  const fr = clamp(state.timeStop / TIME_STOP_FRAMES, 0, 1);
+  ctx.strokeStyle = '#4a6a8a';
+  ctx.lineWidth = 2;
+  sketchStroke(ctx, W / 2 - 90, 66, 180, 8, 1.2);
+  ctx.fillStyle = '#9db8cc';
+  ctx.fillRect(W / 2 - 88, 68, 176 * fr, 4);
+  handText(ctx, '年假中 · 时间停止', W / 2, 88, 14, '#4a6a8a', 'center');
+}
 
+// 坦克头顶：连击数与倍率
+function drawCombo() {
+  if (state.combo < 2) return;
+
+  const t = state.tank;
+  const pop = state.comboPop > 0 ? 1 + (state.comboPop / 12) * 0.45 : 1;
+  const mult = comboMultiplier();
+
+  ctx.save();
+  ctx.translate(t ? t.x : W / 2, t ? Math.max(t.y - 62, 96) : 470);
+  ctx.scale(pop, pop);
+  handText(ctx, `${state.combo} 连击`, 0, 0, 18, '#b5736a', 'center');
+  if (mult > 1) handText(ctx, `×${mult}`, 0, -24, 15, '#c9a86a', 'center');
   ctx.restore();
+}
+
+function drawMessage() {
+  if (state.message) handText(ctx, state.message, W / 2, 44, 18, '#6d8a6d', 'center');
 }
 
 // 一局结束时写进本地榜，返回本次是否破纪录

@@ -5,15 +5,17 @@
   "description": "周一坦克 · 1024 Hackathon 解压小游戏",
   "scripts": {
     "syntax": "node --check js/utils.js && node --check js/entities.js && node --check js/game.js && node --check tests/run.js && node --check tests/game-loop.js",
-    "test": "node tests/run.js && node tests/game-loop.js",
+    "test": "node tests/all.js",
     "check": "npm run lint && npm run format:check && npm run syntax && npm run test",
     "start": "python3 -m http.server 8080",
     "lint": "eslint js tests",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "coverage": "c8 --reporter=text --reporter=html --check-coverage --lines 70 --functions 70 node tests/all.js"
   },
   "devDependencies": {
     "eslint": "^9.15.0",
-    "prettier": "^3.4.0"
+    "prettier": "^3.4.0",
+    "c8": "^10.1.2"
   }
 }
