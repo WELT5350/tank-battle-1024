@@ -4,7 +4,7 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
 const ROUND_SECONDS = 90;      // 一局时长
-const TIME_STOP_FRAMES = 600;  // 年假：时间停止 10 秒
+const TIME_STOP_FRAMES = 300;  // 年假：时间停止 5 秒
 const MERGE_COUNT = 3;         // 几只未读合体
 const FLY_RAM_DAMAGE = 3;      // 飞行撞击伤害
 const RAM_COOLDOWN_FRAMES = 18; // 两次撞击间隔，防止贴脸连续判定
@@ -334,7 +334,7 @@ function update() {
       it.dead = true;
       if (it.kind === 'coffee') { t.hp = Math.min(t.maxHp, t.hp + 3); state.message = '续命一口 +3'; }
       else if (it.kind === 'fish') { t.invincible = Math.max(t.invincible, 180); state.message = '摸鱼 3 秒'; }
-      else { state.timeStop = TIME_STOP_FRAMES; state.message = '一天年假！时间停止 10 秒'; addShake(4); }
+      else { state.timeStop = TIME_STOP_FRAMES; state.message = '一天年假！时间停止 5 秒'; addShake(4); }
       spawnDust(it.x, it.y, '#7d9a7b', 8);
     }
   }
