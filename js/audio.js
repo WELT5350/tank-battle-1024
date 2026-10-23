@@ -135,6 +135,7 @@ const Sfx = (() => {
     [55, 59, 62],   // G
   ];
 
+  let musicSpeed = 1;
   let musicTimer = null;
   let musicStep = 0;
   let musicNext = 0;
@@ -159,6 +160,11 @@ const Sfx = (() => {
     osc.stop(when + dur + 0.02);
   }
 
+  // 时停时把音乐整体拖慢并降调，玩家能从听觉上立刻感到"世界停了"
+  function setMusicSpeed(v) {
+    musicSpeed = Math.max(0.25, Math.min(1, v));
+  }
+
   function scheduleStep(i, when) {
     const chordIndex = Math.floor(i / 8) % CHORDS.length;
     const chord = CHORDS[chordIndex];
@@ -166,13 +172,17 @@ const Sfx = (() => {
 
     // 低音：每小节头尾各一次
     if (inChord === 0 || inChord === 4) {
-      musicNote(midiToFreq(chord[0] - 12), when, STEP * 1.8, 0.16, 'sine');
+      musicNote(midiToFreq(chord[0] - 12) * pitchScale(), when, STEP * 1.8 / musicSpeed, 0.16, 'sine');
     }
     // 琶音：弱起，留空拍，避免太吵
     if (inChord !== 3 && inChord !== 7) {
       const note = chord[inChord % chord.length] + 12;
-      musicNote(midiToFreq(note), when, STEP * 1.2, 0.055, 'triangle');
+      musicNote(midiToFreq(note) * pitchScale(), when, STEP * 1.2 / musicSpeed, 0.055, 'triangle');
     }
+  }
+
+  function pitchScale() {
+    return 0.55 + 0.45 * musicSpeed;   // 拖慢时音高也跟着塌下去
   }
 
   function musicTick() {
@@ -184,7 +194,7 @@ const Sfx = (() => {
       if (musicNext < c.currentTime) musicNext = c.currentTime;
       scheduleStep(musicStep, musicNext);
       musicStep = (musicStep + 1) % LOOP_STEPS;
-      musicNext += STEP;
+      musicNext += STEP / musicSpeed;
     }
   }
 
@@ -209,6 +219,7 @@ const Sfx = (() => {
     isMusicPlaying() {
       return !!musicTimer;
     },
+    setMusicSpeed,
 
     play(name) {
       if (silenced) return;
