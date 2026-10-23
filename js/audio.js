@@ -10,7 +10,7 @@ const Sfx = (() => {
   function ensure() {
     if (audio) return audio;
     if (typeof window === 'undefined') return null;
-    const AC = window.AudioContext || window.webkitAudioContext;
+    const AC = window.AudioContext || /** @type {any} */ (window).webkitAudioContext;
     if (!AC) return null;
     try {
       audio = new AC();
