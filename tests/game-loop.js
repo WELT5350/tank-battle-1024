@@ -455,6 +455,14 @@ try {
   bossA.hurt(4);
   bossA.draw(drawCtx);
 
+  // 合体预兆：两只靠得近时会在头上画脉动虚线环
+  const hintA = new G.DemandEnemy(500, 520);
+  const hintB = new G.DemandEnemy(535, 520);
+  state.enemies.push(hintA, hintB);
+  G.draw();
+  state.enemies.pop();
+  state.enemies.pop();
+
   new G.Bullet(100, 100, 1, 0, 'player').draw(drawCtx);
   new G.Bullet(100, 100, 1, 0, 'enemy').draw(drawCtx);
   const homingA = new G.Bullet(100, 100, 1, 0, 'enemy');

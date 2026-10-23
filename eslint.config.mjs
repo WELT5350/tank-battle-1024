@@ -77,6 +77,8 @@ const shared = {
   drawEntities: 'readonly',
   drawParticles: 'readonly',
   drawLaser: 'readonly',
+  drawMergeHints: 'readonly',
+  drawStaticLink: 'readonly',
   drawPops: 'readonly',
   drawCrosshair: 'readonly',
   drawTimeStopOverlay: 'readonly',
