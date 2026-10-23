@@ -19,7 +19,7 @@ const Sfx = (() => {
       master.connect(audio.destination);
 
       musicBus = audio.createGain();
-      musicBus.gain.value = 0.6; // 背景音乐总音量
+      musicBus.gain.value = 0.85; // 背景音乐总音量
       musicBus.connect(master);
     } catch (e) {
       return null;

@@ -542,6 +542,140 @@ class CallBoss extends Enemy {
   }
 }
 
+// ---------- 隐藏关：便利贴 boss ----------
+// 数值都放这里，方便单独调
+const NOTE_BOSS = {
+  hp: 30,
+  radius: 30,
+  floatHeight: 74, // 悬浮离地高度
+  driftSpeed: 0.9,
+  fireInterval: 130, // 多少帧扇形射一次
+  bulletSpeed: 3.2,
+  contactDamage: 3,
+  contactCooldown: 55,
+};
+
+const NOTE_KINDS = [
+  { text: '本周必达', paper: '#fbe98f' },
+  { text: '再改一版', paper: '#bcdcea' },
+  { text: '辛苦了', paper: '#f6c3c8' },
+  { text: '对齐一下', paper: '#d3e5b0' },
+];
+
+class NoteBoss extends Enemy {
+  constructor(x, note) {
+    super(x, -90, 'note');
+    this.r = NOTE_BOSS.radius;
+    this.hp = NOTE_BOSS.hp;
+    this.maxHp = NOTE_BOSS.hp;
+    this.text = note.text;
+    this.paper = note.paper;
+    this.phase = 'falling';
+    this.vy = 0;
+    this.vx = 0;
+    this.fireTimer = NOTE_BOSS.fireInterval;
+    this.hitCd = 0;
+    this.flash = 0;
+  }
+
+  update(player, spawnBullet) {
+    this.age++;
+    if (this.flash > 0) this.flash--;
+    if (this.hitCd > 0) this.hitCd--;
+
+    // 从天上掉下来
+    if (this.phase === 'falling') {
+      this.vy += 0.35;
+      this.y += this.vy;
+      if (this.y >= GROUND - NOTE_BOSS.floatHeight) {
+        this.y = GROUND - NOTE_BOSS.floatHeight;
+        this.vy = 0;
+        this.phase = 'active';
+      }
+      return;
+    }
+
+    // 悬浮、缓慢追着玩家漂
+    this.y = GROUND - NOTE_BOSS.floatHeight + Math.sin(this.age * 0.05) * 10;
+    const dir = Math.sign(player.x - this.x) || 1;
+    this.vx = lerp(this.vx, dir * NOTE_BOSS.driftSpeed, 0.02);
+    this.x = clamp(this.x + this.vx, 80, W - 80);
+
+    // 定时朝玩家打一个三连扇形
+    this.fireTimer--;
+    if (this.fireTimer <= 0) {
+      this.fireTimer = NOTE_BOSS.fireInterval;
+      const base = Math.atan2(player.y - this.y, player.x - this.x);
+      for (const spread of [-0.34, 0, 0.34]) {
+        const a = base + spread;
+        spawnBullet(
+          new Bullet(
+            this.x,
+            this.y,
+            Math.cos(a) * NOTE_BOSS.bulletSpeed,
+            Math.sin(a) * NOTE_BOSS.bulletSpeed,
+            'enemy'
+          )
+        );
+      }
+    }
+
+    if (this.hitCd <= 0 && hitCircle(this, this.r, player, 24)) {
+      player.damage(NOTE_BOSS.contactDamage);
+      this.hitCd = NOTE_BOSS.contactCooldown;
+    }
+  }
+
+  hurt(n) {
+    super.hurt(n);
+    this.flash = 6;
+  }
+
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(Math.sin(this.age * 0.03) * 0.06);
+
+    ctx.lineWidth = 2.6;
+    ctx.strokeStyle = '#1c1c1c';
+    ctx.fillStyle = this.flash > 0 ? '#e3b7ae' : this.paper;
+    sketchRect(ctx, -this.r, -this.r * 0.78, this.r * 2, this.r * 1.56, 2.2);
+
+    handText(ctx, this.text, 0, -this.r * 0.28, 15, '#333', 'center');
+
+    // 两只眼睛，让它看着像个怪物
+    ctx.fillStyle = '#f3f2ec';
+    for (const dx of [-9, 9]) {
+      ctx.beginPath();
+      ctx.arc(dx, this.r * 0.3, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#1c1c1c';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+      ctx.fillStyle = '#111';
+      ctx.beginPath();
+      ctx.arc(dx + 1, this.r * 0.3, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f3f2ec';
+    }
+    ctx.restore();
+
+    // 血条与名字不跟着晃
+    ctx.save();
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = '#1c1c1c';
+    const bw = 64;
+    const bh = 5;
+    const bx = this.x - bw / 2;
+    const by = this.y - this.r * 0.78 - 18;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = '#b5736a';
+    ctx.fillRect(bx + 1, by + 1, (bw - 2) * clamp(this.hp / this.maxHp, 0, 1), bh - 2);
+    handText(ctx, '加班中', this.x, by - 10, 12, '#8a6a5a', 'center');
+    ctx.restore();
+  }
+}
+
 // 道具
 class Item {
   constructor(x, y, kind) {
