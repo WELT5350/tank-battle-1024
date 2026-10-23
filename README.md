@@ -94,6 +94,7 @@ index.html        入口，960×600 画布 + 样式
 js/utils.js       手绘风绘制工具（抖动线、潦草矩形、手写体）、数学工具
 js/entities.js    实体：PlayerTank / Bullet / Enemy 及其子类 / Item
 js/audio.js       音效：用 WebAudio 现场合成，不加载任何音频文件
+js/telemetry.js   埋点：记录一局内的击杀/受伤/合体等事件，结束后可导出
 js/game.js        主循环、输入、状态机、刷怪、HUD、界面切换
 ```
 
@@ -103,6 +104,7 @@ js/game.js        主循环、输入、状态机、刷怪、HUD、界面切换
 | --- | --- |
 | `utils.js` | 画线和数学，不知道任何游戏规则 |
 | `audio.js` | 只负责发声，不认识游戏对象 |
+| `telemetry.js` | 只负责记录事件，不参与玩法判定 |
 | `entities.js` | 单个实体的状态与行为，不知道关卡和界面 |
 | `game.js` | 编排：读输入、更新世界、判定碰撞、画界面 |
 
@@ -162,13 +164,27 @@ npm test          # 同上
 | 文件 | 覆盖 | 项数 |
 | --- | --- | --- |
 | `tests/run.js` | 纯函数与实体：数学、碰撞、血量、跳高、追踪弹转向、锅的弹跳与静置 | 40 |
-| `tests/game-loop.js` | 主循环：合体触发、时停撞击、时停冻结倒计时、暂停、锅的出场节奏、击杀反馈、连续 600 帧不崩 | 20 |
+| `tests/game-loop.js` | 主循环：合体触发、时停撞击、时停冻结倒计时、暂停、锅的出场节奏、击杀反馈、埋点记录、连续 600 帧不崩 | 24 |
 
 `game-loop.js` 用 Proxy 造了 Canvas 和 DOM 的桩，把 `game.js` 也跑起来，然后手动推进帧。
 
 另外还会检查：`index.html` 引用的脚本都存在、没有遗留 `console.log` / `debugger`、关键常量仍然定义着。
 
 CI 在每次 push 到 `main` 和每个 PR 上自动跑这套检查（`.github/workflows/ci.yml`）。
+
+## 调难度用的埋点
+
+按 `F1` 打开调试面板，实时显示血量、敌人数、锅的倒计时和最近 6 条事件。
+
+一局结束（阵亡或熬到下班）时，控制台会打印本局汇总，同时数据挂在 `window.__lastRound` 上：
+
+```js
+JSON.stringify(window.__lastRound)
+```
+
+记录的事件类型：`round_start` / `spawn` / `pot_spawn` / `kill`（带 `kind` 和 `by`）/ `damage` / `pickup` / `merge` / `flight` / `death` / `win`。
+
+**不联网、不上传**，只在内存里。
 
 ## 开发规范
 

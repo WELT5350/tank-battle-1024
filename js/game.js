@@ -29,6 +29,7 @@ const state = {
   lastSpaceAt: 0,
   timeStop: 0,
   potTimer: 900,
+  debug: false,
 };
 
 const input = { left: false, right: false, up: false, down: false };
@@ -75,6 +76,12 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (['a', 'd', 'w', 's', ' '].includes(k)) e.preventDefault();
 
+  if (k === 'f1') {
+    state.debug = !state.debug;
+    if (state.tank) Telemetry.log('debug_toggle', { on: state.debug });
+    return;
+  }
+
   if (k === 'escape') {
     if (state.mode === 'playing') { state.mode = 'paused'; }
     else if (state.mode === 'paused') { state.mode = 'playing'; }
@@ -103,6 +110,7 @@ window.addEventListener('keydown', (e) => {
     if (now - state.lastSpaceAt < 320) {
       // 双击空格：5 血及以下进入旋转起飞
       if (t.canFly() && t.startFlight()) {
+        Telemetry.log('flight', { hp: t.hp });
         state.message = '画饼升天！无敌 10 秒';
         addShake(2.4);
       } else if (!t.flying && t.hp > 5) {
@@ -178,6 +186,8 @@ function startGame() {
   state.timeStop = 0;
   state.potTimer = POT_INTERVAL_FRAMES;
   state.tank = new PlayerTank(W / 2, GROUND - 30);
+  Telemetry.reset();
+  Telemetry.log('round_start');
 }
 
 function spawnWave() {
@@ -236,6 +246,8 @@ function updateRound() {
   if (state.timeLeft <= 0) {
     state.timeLeft = 0;
     state.mode = 'win';
+    Telemetry.log('win', { kills: state.kills });
+    Telemetry.finish({ result: 'win', kills: state.kills, hp: state.tank ? state.tank.hp : 0 });
     Sfx.play('win');
     return;
   }
@@ -243,6 +255,7 @@ function updateRound() {
   state.spawnTimer--;
   if (state.spawnTimer <= 0) {
     spawnWave();
+    Telemetry.log('spawn');
     const pressure = clamp((ROUND_SECONDS - state.timeLeft) / ROUND_SECONDS, 0, 1);
     state.spawnTimer = Math.round(lerp(105, 52, pressure));
   }
@@ -250,6 +263,7 @@ function updateRound() {
   state.potTimer--;
   if (state.potTimer <= 0) {
     spawnPot();
+    Telemetry.log('pot_spawn');
     state.potTimer = POT_INTERVAL_FRAMES;
   }
 }
@@ -288,7 +302,7 @@ function ramEnemies(t) {
     e.hurt(FLY_RAM_DAMAGE);
     t.ramCd = RAM_COOLDOWN_FRAMES;
     addShake(1.4);
-    if (e.dead) { state.kills++; killFeedback(e.x, e.y); }
+    if (e.dead) { state.kills++; killFeedback(e.x, e.y); Telemetry.log('kill', { kind: e.kind, by: 'ram' }); }
     else spawnDust(e.x, e.y, '#8a6a5a', 6);
   }
 }
@@ -299,7 +313,7 @@ function crushFrozenEnemies(t) {
     if (e.dead) continue;
     if (!hitCircle(t, 24, e, e.r)) continue;
     e.hurt(999);
-    if (e.dead) { state.kills++; killFeedback(e.x, e.y); }
+    if (e.dead) { state.kills++; killFeedback(e.x, e.y); Telemetry.log('kill', { kind: e.kind, by: 'crush' }); }
     addShake(1.2);
   }
 }
@@ -328,6 +342,7 @@ function resolveBulletHits() {
         if (e.dead) {
           state.kills++;
           killFeedback(e.x, e.y);
+          Telemetry.log('kill', { kind: e.kind });
           addShake(1.2);
         } else {
           Sfx.play('hit');
@@ -337,6 +352,7 @@ function resolveBulletHits() {
     } else if (t && hitCircle(b, b.r, t, 22)) {
       b.dead = true;
       t.damage(1);
+      Telemetry.log('damage', { by: 'bullet', hp: t.hp });
       Sfx.play('hurt');
       addShake(2.0);
       spawnDust(t.x, t.y, '#b5736a', 8);
@@ -423,6 +439,7 @@ function tryMergeUnread() {
   for (const e of picked) e.dead = true;
   state.enemies = state.enemies.filter((e) => !e.dead);
   state.enemies.push(new CallBoss(clamp(cx, 60, W - 60), cy));
+  Telemetry.log('merge');
   state.message = '未读挤成一堆——夺命连环call！';
   Sfx.play('merge');
   addShake(3);
@@ -436,6 +453,7 @@ function updateItems() {
     it.update();
     if (it.dead || !t || !hitCircle(it, it.r, t, 24)) continue;
     it.dead = true;
+    Telemetry.log('pickup', { kind: it.kind });
     Sfx.play(it.kind === 'leave' ? 'timestop' : 'pickup');
     if (it.kind === 'coffee') {
       t.hp = Math.min(t.maxHp, t.hp + 3);
@@ -486,6 +504,8 @@ function checkPlayerDown() {
   if (!t || t.hp > 0 || state.mode !== 'playing') return;
   state.mode = 'over';
   state.shake = 9;
+  Telemetry.log('death', { kills: state.kills });
+  Telemetry.finish({ result: 'over', kills: state.kills, timeLeft: Math.round(state.timeLeft) });
   Sfx.play('over');
   spawnDust(t.x, t.y, '#b5736a', 24);
 }
@@ -573,6 +593,35 @@ function drawHUD() {
   ctx.restore();
 }
 
+// F1 调试面板：调难度时看这一屏就够了
+function drawDebug() {
+  if (!state.debug) return;
+  const t = state.tank;
+  const lines = [
+    `闪烁 ${state.frame}  |  模式 ${state.mode}`,
+    `血量 ${t ? t.hp : '-'}/10  |  击杀 ${state.kills}`,
+    `剩余 ${Math.ceil(state.timeLeft)}s  |  时停 ${state.timeStop}`,
+    `敌人 ${state.enemies.length}  |  子弹 ${state.bullets.length}`,
+    `锅 ${state.potTimer} 帧后  |  起飞 ${t && t.flying ? t.flyTimer : '否'}`,
+    '— 最近事件 —',
+  ];
+  for (const e of Telemetry.recent(6)) {
+    const extra = e.kind ? ` ${e.kind}` : (e.by ? ` ${e.by}` : '');
+    lines.push(`  ${e.t}s  ${e.type}${extra}`);
+  }
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(28,28,28,0.82)';
+  ctx.fillRect(W - 268, 74, 250, 18 + lines.length * 15);
+  ctx.fillStyle = '#e8e4d8';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'left';
+  lines.forEach((line, i) => {
+    ctx.fillText(line, W - 256, 92 + i * 15);
+  });
+  ctx.restore();
+}
+
 function drawOverlay() {
   if (state.mode === 'playing') return;
   ctx.save();
@@ -657,6 +706,7 @@ function draw() {
   }
 
   drawHUD();
+  drawDebug();
   drawOverlay();
 }
 
