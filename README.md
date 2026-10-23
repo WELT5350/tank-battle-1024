@@ -48,7 +48,7 @@ python3 -m http.server 8080
 | --- | --- | --- | --- |
 | **未读** | 地面 | 直冲玩家，撞上即自爆 | 扣 1 点 |
 | **周会通知** | 空中盘旋 | 定期发射**追踪弹**，会拐弯追人 | 扣 1 点 |
-| **隔壁的锅** | 缓慢飘入 | 落地连弹三次后静置，踩到会碎 | 碰到扣 2 点 |
+| **隔壁的锅** | 固定每 15 秒从屏幕一侧飞入 | 落地连弹三次（约 50 / 29 / 16 像素）后静置，踩到会碎 | 碰到扣 2 点 |
 
 **追踪弹**每帧最多转向 0.052 弧度，可以靠急跳甩开，站着不动必中。
 
@@ -140,6 +140,7 @@ ready ──空格──> playing ──ESC──> paused
 | `MERGE_COUNT` | game.js | 合体需要几只未读 |
 | `MERGE_RADIUS` | game.js | 合体要求这几只彼此的最大距离 |
 | `POT_BOUNCE_SPEEDS` | entities.js | 锅每次弹起的初速 |
+| `POT_INTERVAL_FRAMES` | game.js | 锅的出场间隔 |
 | `POT_DAMAGE` | entities.js | 锅碰到扣的血 |
 | `FLY_RAM_DAMAGE` | game.js | 飞行撞击伤害 |
 | `RAM_COOLDOWN_FRAMES` | game.js | 飞行撞击冷却 |

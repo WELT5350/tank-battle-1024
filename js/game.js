@@ -9,6 +9,7 @@ const MERGE_COUNT = 3;         // 几只未读合体
 const MERGE_RADIUS = 50;       // 这几只之间的距离上限，太远不算一坨
 const FLY_RAM_DAMAGE = 3;      // 飞行撞击伤害
 const RAM_COOLDOWN_FRAMES = 18; // 两次撞击间隔，防止贴脸连续判定
+const POT_INTERVAL_FRAMES = 900; // 锅固定 15 秒飞进来一个
 
 const state = {
   mode: 'ready',      // ready | playing | over | win
@@ -26,6 +27,7 @@ const state = {
   mouse: { x: 480, y: 300 },
   lastSpaceAt: 0,
   timeStop: 0,
+  potTimer: 900,
 };
 
 const input = { left: false, right: false, up: false, down: false };
@@ -165,28 +167,32 @@ function startGame() {
   state.message = '';
   state.lastSpaceAt = 0;
   state.timeStop = 0;
+  state.potTimer = POT_INTERVAL_FRAMES;
   state.tank = new PlayerTank(W / 2, GROUND - 30);
 }
 
 function spawnWave() {
   const difficulty = 1 + (ROUND_SECONDS - state.timeLeft) / 45;
-  const roll = Math.random();
-  if (roll < 0.55) {
+  if (Math.random() < 0.62) {
     const fromLeft = Math.random() < 0.5;
     const e = new DemandEnemy(fromLeft ? -20 : W + 20, GROUND - 15);
     e.speed *= difficulty;
     state.enemies.push(e);
-  } else if (roll < 0.85) {
-    state.enemies.push(new MeetingEnemy(rand(120, W - 120), rand(90, 240)));
   } else {
-    const fromLeft = Math.random() < 0.5;
-    state.enemies.push(new PotEnemy(
-      fromLeft ? -40 : W + 40,
-      GROUND - 200,
-      (fromLeft ? 1 : -1) * rand(1.3, 2.0) * difficulty,
-      rand(-2.2, -1.2)
-    ));
+    state.enemies.push(new MeetingEnemy(rand(120, W - 120), rand(90, 240)));
   }
+}
+
+// 锅单独走固定节奏，15 秒来一个
+function spawnPot() {
+  const difficulty = 1 + (ROUND_SECONDS - state.timeLeft) / 45;
+  const fromLeft = Math.random() < 0.5;
+  state.enemies.push(new PotEnemy(
+    fromLeft ? -40 : W + 40,
+    GROUND - 200,
+    (fromLeft ? 1 : -1) * rand(2.0, 2.9) * difficulty,
+    rand(-2.4, -1.4)
+  ));
 }
 
 // ---------- 更新 ----------
@@ -208,6 +214,12 @@ function update() {
       spawnWave();
       const pressure = clamp((ROUND_SECONDS - state.timeLeft) / ROUND_SECONDS, 0, 1);
       state.spawnTimer = Math.round(lerp(105, 52, pressure));
+    }
+
+    state.potTimer--;
+    if (state.potTimer <= 0) {
+      spawnPot();
+      state.potTimer = POT_INTERVAL_FRAMES;
     }
   }
 
