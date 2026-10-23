@@ -94,11 +94,6 @@ function scratchFill(ctx, color) {
   ctx.fillStyle = color;
 }
 
-// 两点间角度
-function angleTo(a, b) {
-  return Math.atan2(b.y - a.y, b.x - a.x);
-}
-
 // 圆与圆碰撞
 function hitCircle(a, ar, b, br) {
   return dist(a, b) < ar + br;

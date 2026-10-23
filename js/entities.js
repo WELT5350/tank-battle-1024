@@ -1,9 +1,12 @@
 // 游戏实体：玩家坦克、子弹、职场怪、道具
 
 const GRAVITY = 0.55;
-const MAX_SPIN = 0.40;   // 炮管最大角速度
-const LIFT_GAIN = 0.72;  // 转速拉满时的升力，只比重力大一点点，才是慢慢飘
-const LIFT_THRESHOLD = 0.5; // 转速不到一半不产生升力，方便稳定瞄准
+
+// 玩法数值，集中在这里方便调
+const MAX_HP = 10;              // 精神状态上限
+const FLY_FRAMES = 600;         // 画饼升天持续帧数（10 秒 @60fps）
+const JUMP_VELOCITY = -14.6;
+const BULLET_SPEED = 12.5;
 
 class Bullet {
   constructor(x, y, vx, vy, owner) {
@@ -65,8 +68,8 @@ class PlayerTank {
     this.aimAngle = -Math.PI / 2;
     this.onGround = true;
     this.jumpsLeft = 1;
-    this.hp = 10;
-    this.maxHp = 10;
+    this.hp = MAX_HP;
+    this.maxHp = MAX_HP;
     this.invincible = 0;
     this.hurtFlash = 0;
     this.flying = false;
@@ -114,7 +117,7 @@ class PlayerTank {
   jump() {
     if (this.flying) return false;
     if (this.jumpsLeft > 0) {
-      this.vy = -14.6;
+      this.vy = JUMP_VELOCITY;
       this.jumpsLeft--;
       this.onGround = false;
       return true;
@@ -127,8 +130,8 @@ class PlayerTank {
   startFlight() {
     if (!this.canFly()) return false;
     this.flying = true;
-    this.flyTimer = 600;       // 10 秒 @60fps
-    this.invincible = 600;
+    this.flyTimer = FLY_FRAMES;
+    this.invincible = FLY_FRAMES;
     this.jumpsLeft = 1;
     return true;
   }
@@ -141,7 +144,7 @@ class PlayerTank {
   }
 
   fire() {
-    const speed = 12.5;
+    const speed = BULLET_SPEED;
     const ox = Math.cos(this.aimAngle) * 30;
     const oy = Math.sin(this.aimAngle) * 30;
     const bx = this.x + ox;
@@ -209,10 +212,16 @@ class Enemy {
     this.kind = kind;
     this.dead = false;
     this.r = 16;
-    this.hp = 1;
     this.age = 0;
+    this.hp = 1;
     this.labelOff = rand(-9, 9);
     this.label = { demand: '临时需求', meeting: '周会通知', pot: '隔壁的锅' }[kind];
+  }
+
+  // 所有敌人共用的受伤接口：扣血，归零即死
+  hurt(n) {
+    this.hp -= n;
+    if (this.hp <= 0) this.dead = true;
   }
 }
 
@@ -354,9 +363,8 @@ class CallBoss extends Enemy {
     if (this.x < -60 || this.x > W + 60) this.dead = true;
   }
   hurt(n) {
-    this.hp -= n;
+    super.hurt(n);
     this.flash = 6;
-    if (this.hp <= 0) this.dead = true;
   }
   draw(ctx) {
     const shakeX = this.flash > 0 ? rand(-2, 2) : 0;

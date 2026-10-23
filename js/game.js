@@ -3,7 +3,9 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-const ROUND_SECONDS = 90;
+const ROUND_SECONDS = 90;      // 一局时长
+const TIME_STOP_FRAMES = 600;  // 年假：时间停止 10 秒
+const MERGE_COUNT = 6;         // 几只未读合体
 
 const state = {
   mode: 'ready',      // ready | playing | over | win
@@ -18,7 +20,7 @@ const state = {
   spawnTimer: 0,
   tank: null,
   message: '',
-  mouse: { x: 480, y: 300, down: false },
+  mouse: { x: 480, y: 300 },
   lastSpaceAt: 0,
   timeStop: 0,
 };
@@ -43,7 +45,6 @@ canvas.addEventListener('mousemove', (e) => {
 canvas.addEventListener('mousedown', (e) => {
   if (e.button !== 0) return;
   e.preventDefault();
-  state.mouse.down = true;
   const p = toCanvas(e);
   state.mouse.x = p.x;
   state.mouse.y = p.y;
@@ -51,7 +52,6 @@ canvas.addEventListener('mousedown', (e) => {
   shoot();
 });
 
-window.addEventListener('mouseup', () => { state.mouse.down = false; });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 function shoot() {
@@ -244,12 +244,8 @@ function update() {
         if (e.dead) continue;
         if (hitCircle(b, b.r, e, e.r)) {
           b.dead = true;
-          if (typeof e.hurt === 'function') {
-            e.hurt(1);
-            spawnDust(b.x, b.y, '#8a6a5a', 4);
-          } else {
-            e.dead = true;
-          }
+          e.hurt(1);
+          spawnDust(b.x, b.y, '#8a6a5a', 4);
           if (e.dead) {
             state.kills++;
             spawnDust(e.x, e.y, '#8a6a5a', 10);
@@ -309,10 +305,10 @@ function update() {
 
   // 未读攒够了就合体成夺命连环 call
   const unread = state.enemies.filter((e) => e.kind === 'demand');
-  if (unread.length >= 6) {
-    const six = unread.slice(0, 6);
-    const cx = six.reduce((a, e) => a + e.x, 0) / 6;
-    const cy = six.reduce((a, e) => a + e.y, 0) / 6;
+  if (unread.length >= MERGE_COUNT) {
+    const six = unread.slice(0, MERGE_COUNT);
+    const cx = six.reduce((a, e) => a + e.x, 0) / MERGE_COUNT;
+    const cy = six.reduce((a, e) => a + e.y, 0) / MERGE_COUNT;
     for (const e of six) e.dead = true;
     state.enemies = state.enemies.filter((e) => !e.dead);
     state.enemies.push(new CallBoss(clamp(cx, 60, W - 60), cy));
@@ -328,7 +324,7 @@ function update() {
       it.dead = true;
       if (it.kind === 'coffee') { t.hp = Math.min(t.maxHp, t.hp + 3); state.message = '续命一口 +3'; }
       else if (it.kind === 'fish') { t.invincible = Math.max(t.invincible, 180); state.message = '摸鱼 3 秒'; }
-      else { state.timeStop = 600; state.message = '一天年假！时间停止 10 秒'; addShake(4); }
+      else { state.timeStop = TIME_STOP_FRAMES; state.message = '一天年假！时间停止 10 秒'; addShake(4); }
       spawnDust(it.x, it.y, '#7d9a7b', 8);
     }
   }
@@ -412,7 +408,7 @@ function drawHUD() {
   handText(ctx, '精神状态', bx, by + barH + 16, 14, '#444');
 
   if (t && t.flying) {
-    const fr = clamp(t.flyTimer / 600, 0, 1);
+    const fr = clamp(t.flyTimer / FLY_FRAMES, 0, 1);
     ctx.strokeStyle = '#8a6a5a';
     ctx.lineWidth = 2;
     const fw = 150;
@@ -427,7 +423,7 @@ function drawHUD() {
   handText(ctx, `干掉了 ${state.kills} 个`, W - 24, by + 28, 15, '#666', 'right');
 
   if (state.timeStop > 0) {
-    const fr = clamp(state.timeStop / 600, 0, 1);
+    const fr = clamp(state.timeStop / TIME_STOP_FRAMES, 0, 1);
     ctx.strokeStyle = '#4a6a8a';
     ctx.lineWidth = 2;
     sketchStroke(ctx, W / 2 - 90, 66, 180, 8, 1.2);
