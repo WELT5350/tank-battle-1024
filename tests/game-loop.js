@@ -90,7 +90,7 @@ try {
   }
   vm.runInContext(
     'globalThis.__game = { state, input, startGame, update, draw, spawnWave, spawnPot, Telemetry,' +
-      '  PlayerTank, DemandEnemy, MeetingEnemy, PotEnemy, CallBoss, Item, Bullet, Sfx, Records };',
+      '  PlayerTank, DemandEnemy, MeetingEnemy, PotEnemy, CallBoss, NoteBoss, Item, Bullet, Sfx, Records, startHidden };',
     context,
     { filename: path.join(ROOT, 'tests/export.js') }
   );
@@ -476,6 +476,24 @@ try {
   drawError = err.message;
 }
 assert('所有实体都能画出来', drawError === null, drawError || '');
+
+// 11h. 隐藏关：不刷小怪，只有一只便利贴 boss
+G.startGame();
+state.mode = 'win';
+G.startHidden();
+assert('隐藏关进入 playing', state.mode === 'playing');
+assert('隐藏关标记开启', state.hidden === true);
+assert('隐藏关只有一只 boss', state.enemies.length === 1 && state.enemies[0].kind === 'note');
+
+const enemyCountBefore = state.enemies.length;
+step(240); // 跑四秒，正常关早就刷出好几只了
+assert('隐藏关不刷小怪', state.enemies.length === enemyCountBefore, '敌人=' + state.enemies.length);
+
+// 等 boss 落地再打
+state.enemies[0].hurt(999);
+step(2);
+assert('打死便利贴就算通关', state.mode === 'win', 'mode=' + state.mode);
+assert('通关后仍标记为隐藏关', state.hidden === true);
 
 // 12. 正常游玩不会崩
 G.startGame();

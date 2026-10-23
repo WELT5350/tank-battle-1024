@@ -48,6 +48,7 @@ const state = {
   maxCombo: 0,
   comboPop: 0,
   phase: 1,
+  hidden: false, // 隐藏关：不刷小怪，只有一只便利贴 boss
   board: [],
   isBest: false,
   recordRank: 0,
@@ -143,6 +144,11 @@ function handleGlobalKey(k) {
 function handleMenuKey(k) {
   if (state.mode === 'paused') {
     if (k === 'r') startGame();
+    return true;
+  }
+
+  if (state.mode === 'win' && k === 'e') {
+    startHidden();
     return true;
   }
 
@@ -285,6 +291,7 @@ function startGame() {
   state.maxCombo = 0;
   state.comboPop = 0;
   state.phase = 1;
+  state.hidden = false;
   state.isBest = false;
   state.recordRank = 0;
   state.board = Records.load();
@@ -293,6 +300,27 @@ function startGame() {
   Telemetry.reset();
   Telemetry.log('round_start');
   Sfx.startMusic();
+}
+
+// 倒计时结束后按 E 进隐藏关：不刷小怪，天上掉一张便利贴下来当 boss
+function startHidden() {
+  state.mode = 'playing';
+  state.hidden = true;
+  state.enemies.length = 0;
+  state.items.length = 0;
+  state.bullets.length = 0;
+  state.particles.length = 0;
+  state.pops.length = 0;
+  state.timeStop = 0;
+  state.tank.hp = Math.min(state.tank.maxHp, Math.max(state.tank.hp, 5));
+  state.tank.laserTimer = 0;
+  state.message = '加班开始';
+
+  const note = NOTE_KINDS[Math.floor(Math.random() * NOTE_KINDS.length)];
+  state.enemies.push(new NoteBoss(rand(220, W - 220), note));
+  Sfx.setMusicSpeed(0.7);
+  Sfx.play('merge');
+  Telemetry.log('hidden_start', { note: note.text });
 }
 
 function spawnWave() {
@@ -342,6 +370,7 @@ function update() {
   updateEnemies(frozen);
   updateItems();
   updateCombo();
+  checkHiddenCleared();
   updateBossRing();
   updateEffects();
   checkPlayerDown();
@@ -360,6 +389,7 @@ function updateTimeStop(frozen) {
 // ---------- 回合：倒计时与刷怪 ----------
 function updateRound() {
   if (state.mode !== 'playing') return;
+  if (state.hidden) return; // 隐藏关只看 boss，不算时间也不刷怪
 
   state.timeLeft -= 1 / 60;
   if (state.timeLeft <= 0) {
@@ -552,6 +582,7 @@ function updateEnemies(frozen) {
     const spawned = [];
     for (const e of state.enemies) {
       if (e.kind === 'meeting' && t) e.update(t, (b) => spawned.push(b));
+      else if (e.kind === 'note' && t) e.update(t, (b) => spawned.push(b));
       else if (t) e.update(t);
 
       if (e.kind === 'demand' && e.dead && t) {
@@ -722,6 +753,19 @@ function updateEffects() {
   if (state.message && state.frame % 220 === 0) state.message = '';
 }
 
+// 隐藏关里唯一的 boss 死了就算通关
+function checkHiddenCleared() {
+  if (!state.hidden || state.mode !== 'playing') return;
+  if (state.enemies.some((e) => e.kind === 'note' && !e.dead)) return;
+
+  state.mode = 'win';
+  Sfx.setMusicSpeed(1);
+  Sfx.play('win');
+  saveRecord('win');
+  Telemetry.log('hidden_win', { kills: state.kills });
+  Telemetry.finish({ result: 'hidden_win', kills: state.kills, score: state.score });
+}
+
 function checkPlayerDown() {
   const t = state.tank;
   if (!t || t.hp > 0 || state.mode !== 'playing') return;
@@ -873,7 +917,8 @@ function drawScorePanel() {
   const secs = Math.ceil(state.timeLeft);
   const phaseTag = state.phase === 3 ? '（冲刺）' : '';
 
-  handText(ctx, `还有 ${secs} 秒下班${phaseTag}`, W - 24, 24, 20, '#222', 'right');
+  const clock = state.hidden ? '加班中' : `还有 ${secs} 秒下班${phaseTag}`;
+  handText(ctx, clock, W - 24, 24, 20, '#222', 'right');
   handText(ctx, `分数 ${state.score}　干掉 ${state.kills} 个`, W - 24, 50, 15, '#666', 'right');
 }
 
@@ -984,72 +1029,93 @@ function drawDebug() {
 
 function drawOverlay() {
   if (state.mode === 'playing') return;
+
   ctx.save();
   ctx.fillStyle = 'rgba(243,242,236,0.80)';
   ctx.fillRect(0, 0, W, H);
 
-  if (state.mode === 'ready') {
-    handText(ctx, '周一坦克', W / 2, 132, 52, '#222', 'center');
-    handText(ctx, '一个打工人熬过两分钟工作日的解压小游戏', W / 2, 178, 17, '#555', 'center');
+  if (state.mode === 'ready') drawReadyScreen();
+  else if (state.mode === 'over') drawLoseScreen();
+  else if (state.mode === 'paused') drawPauseScreen();
+  else if (state.mode === 'win') drawWinScreen();
 
-    // 本地最高分榜
-    const board = Records.load();
-    if (board.length) {
-      handText(ctx, `历史最高 ${board[0].score}`, W / 2, 226, 19, '#8a6a5a', 'center');
-      const tops = board.slice(0, 3);
-      tops.forEach((r, i) => {
-        const tag = r.result === 'win' ? '下班' : '倒下';
-        handText(
-          ctx,
-          `${i + 1}. ${r.score} 分 · ${r.kills} 杀 · ${tag}`,
-          W / 2,
-          256 + i * 22,
-          14,
-          '#8a8080',
-          'center'
-        );
-      });
-    } else {
-      handText(ctx, '还没有纪录，第一局就是你的', W / 2, 236, 15, '#999', 'center');
-    }
-    handText(ctx, 'A / D 移动　　空格 跳跃　　ESC 暂停', W / 2, 348, 19, '#222', 'center');
-    handText(ctx, '鼠标 瞄准　　左键 开炮', W / 2, 384, 19, '#222', 'center');
-    handText(ctx, '按 空格 开始', W / 2, 478, 22, '#b5736a', 'center');
-  } else if (state.mode === 'over') {
-    handText(ctx, '你倒下了', W / 2, 190, 48, '#b5736a', 'center');
-    handText(ctx, rankOf(false), W / 2, 250, 44, '#8a6a5a', 'center');
-    handText(
-      ctx,
-      `撑过 ${ROUND_SECONDS - Math.ceil(state.timeLeft)} 秒 · 干掉 ${state.kills} 个 · 最高 ${state.maxCombo} 连击`,
-      W / 2,
-      300,
-      17,
-      '#555',
-      'center'
-    );
-    handText(ctx, `分数 ${state.score}`, W / 2, 336, 26, '#222', 'center');
-    handText(ctx, recordLine(), W / 2, 372, 16, '#8a6a5a', 'center');
-    handText(ctx, '按 R 再来一次', W / 2, 420, 22, '#222', 'center');
-  } else if (state.mode === 'paused') {
-    handText(ctx, '已暂停', W / 2, 240, 46, '#222', 'center');
-    handText(ctx, '按 ESC 继续，按 R 重开', W / 2, 306, 20, '#555', 'center');
-  } else if (state.mode === 'win') {
-    handText(ctx, '下班了！', W / 2, 190, 52, '#7d9a7b', 'center');
-    handText(ctx, rankOf(true), W / 2, 250, 44, '#8a6a5a', 'center');
-    handText(
-      ctx,
-      `干掉 ${state.kills} 个 · 最高 ${state.maxCombo} 连击 · 剩 ${state.tank ? state.tank.hp : 0} 血`,
-      W / 2,
-      300,
-      17,
-      '#555',
-      'center'
-    );
-    handText(ctx, `分数 ${state.score}`, W / 2, 336, 26, '#222', 'center');
-    handText(ctx, recordLine(), W / 2, 372, 16, '#8a6a5a', 'center');
-    handText(ctx, '按 R 再熬一天', W / 2, 420, 22, '#222', 'center');
-  }
   ctx.restore();
+}
+
+function drawReadyScreen() {
+  handText(ctx, '周一坦克', W / 2, 132, 52, '#222', 'center');
+  handText(ctx, '一个打工人熬过两分钟工作日的解压小游戏', W / 2, 178, 17, '#555', 'center');
+
+  // 本地最高分榜
+  const board = Records.load();
+  if (!board.length) {
+    handText(ctx, '还没有纪录，第一局就是你的', W / 2, 236, 15, '#999', 'center');
+  } else {
+    handText(ctx, `历史最高 ${board[0].score}`, W / 2, 226, 19, '#8a6a5a', 'center');
+    board.slice(0, 3).forEach((r, i) => {
+      const tag = r.result === 'win' ? '下班' : '倒下';
+      handText(
+        ctx,
+        `${i + 1}. ${r.score} 分 · ${r.kills} 杀 · ${tag}`,
+        W / 2,
+        256 + i * 22,
+        14,
+        '#8a8080',
+        'center'
+      );
+    });
+  }
+
+  handText(ctx, 'A / D 移动　　空格 跳跃　　ESC 暂停', W / 2, 348, 19, '#222', 'center');
+  handText(ctx, '鼠标 瞄准　　左键 开炮', W / 2, 384, 19, '#222', 'center');
+  handText(ctx, '按 空格 开始', W / 2, 478, 22, '#b5736a', 'center');
+}
+
+function drawLoseScreen() {
+  const survived = ROUND_SECONDS - Math.ceil(state.timeLeft);
+  handText(ctx, '你倒下了', W / 2, 190, 48, '#b5736a', 'center');
+  handText(ctx, rankOf(false), W / 2, 250, 44, '#8a6a5a', 'center');
+  handText(
+    ctx,
+    `撑过 ${survived} 秒 · 干掉 ${state.kills} 个 · 最高 ${state.maxCombo} 连击`,
+    W / 2,
+    300,
+    17,
+    '#555',
+    'center'
+  );
+  handText(ctx, `分数 ${state.score}`, W / 2, 336, 26, '#222', 'center');
+  handText(ctx, recordLine(), W / 2, 372, 16, '#8a6a5a', 'center');
+  handText(ctx, '按 R 再来一次', W / 2, 420, 22, '#222', 'center');
+}
+
+function drawPauseScreen() {
+  handText(ctx, '已暂停', W / 2, 240, 46, '#222', 'center');
+  handText(ctx, '按 ESC 继续，按 R 重开', W / 2, 306, 20, '#555', 'center');
+}
+
+function drawWinScreen() {
+  const hp = state.tank ? state.tank.hp : 0;
+  handText(ctx, state.hidden ? '加班结束了' : '下班了！', W / 2, 190, 52, '#7d9a7b', 'center');
+  handText(ctx, rankOf(true), W / 2, 250, 44, '#8a6a5a', 'center');
+  handText(
+    ctx,
+    `干掉 ${state.kills} 个 · 最高 ${state.maxCombo} 连击 · 剩 ${hp} 血`,
+    W / 2,
+    300,
+    17,
+    '#555',
+    'center'
+  );
+  handText(ctx, `分数 ${state.score}`, W / 2, 336, 26, '#222', 'center');
+  handText(ctx, recordLine(), W / 2, 372, 16, '#8a6a5a', 'center');
+
+  if (state.hidden) {
+    handText(ctx, '按 R 回到正常的下班', W / 2, 420, 22, '#222', 'center');
+  } else {
+    handText(ctx, '按 R 再熬一天', W / 2, 414, 22, '#222', 'center');
+    handText(ctx, '按 E 加班？', W / 2, 452, 18, '#8a6a5a', 'center');
+  }
 }
 
 function draw() {
