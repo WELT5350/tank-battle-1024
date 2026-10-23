@@ -252,17 +252,30 @@ function drawBackground() {
 }
 
 function drawHUD() {
-  const bx = 24, by = 26;
+  const bx = 24, by = 22, barW = 250, barH = 18;
   ctx.save();
 
+  // 精神状态：连续填充条，10 点上限，不写数字不分格
   const hp = state.tank ? state.tank.hp : 10;
-  const hpColor = hp <= 3 ? '#b5736a' : hp <= 6 ? '#c9a86a' : '#3a3a3a';
-  handText(ctx, '精神状态', bx, by, 15, '#444');
-  handText(ctx, String(hp), bx + 76, by - 2, 34, hpColor);
+  const fill = hp <= 3 ? '#b5736a' : hp <= 6 ? '#c9a86a' : '#7d9a7b';
+
+  ctx.strokeStyle = '#1c1c1c';
+  ctx.lineWidth = 2.4;
+  wobblyRect(ctx, bx, by, barW, barH, 1.6);
+  ctx.stroke();
+
+  const inset = 3;
+  const ratio = clamp(hp / 10, 0, 1);
+  if (ratio > 0) {
+    ctx.fillStyle = fill;
+    ctx.fillRect(bx + inset, by + inset, (barW - inset * 2) * ratio, barH - inset * 2);
+  }
+
+  handText(ctx, '精神状态', bx, by + barH + 16, 14, '#444');
 
   const secs = Math.ceil(state.timeLeft);
-  handText(ctx, `还有 ${secs} 秒下班`, W - 24, by - 4, 20, '#222', 'right');
-  handText(ctx, `干掉了 ${state.kills} 个`, W - 24, by + 22, 15, '#666', 'right');
+  handText(ctx, `还有 ${secs} 秒下班`, W - 24, by + 2, 20, '#222', 'right');
+  handText(ctx, `干掉了 ${state.kills} 个`, W - 24, by + 28, 15, '#666', 'right');
 
   if (state.message) handText(ctx, state.message, W / 2, 40, 18, '#6d8a6d', 'center');
 
