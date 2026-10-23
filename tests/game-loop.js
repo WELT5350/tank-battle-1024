@@ -52,12 +52,21 @@ const windowStub = {
 };
 
 let clock = 1000;
+// 内存版 localStorage，让 Records 能跑起来
+const memoryStore = new Map();
+const localStorageStub = {
+  getItem: (k) => (memoryStore.has(k) ? memoryStore.get(k) : null),
+  setItem: (k, v) => memoryStore.set(k, String(v)),
+  removeItem: (k) => memoryStore.delete(k),
+};
+
 const sandbox = {
   // 静音 console，避免埋点汇总刷屏干扰测试输出
   console: { log() {}, error: console.error, warn() {} },
   Math,
   Date,
   document: { getElementById: () => canvasStub },
+  localStorage: localStorageStub,
   window: windowStub,
   performance: { now: () => clock },
   requestAnimationFrame: () => 0, // 不让它自己跑循环，由测试手动推进
@@ -69,10 +78,11 @@ const source = [
   read('js/entities.js'),
   read('js/audio.js'),
   read('js/telemetry.js'),
+  read('js/records.js'),
   read('js/game.js'),
   // 把内部符号导出来给测试用
   'globalThis.__game = { state, input, startGame, update, draw, spawnWave, spawnPot, Telemetry,' +
-    '  PlayerTank, DemandEnemy, MeetingEnemy, PotEnemy, CallBoss, Item, Bullet, Sfx };',
+    '  PlayerTank, DemandEnemy, MeetingEnemy, PotEnemy, CallBoss, Item, Bullet, Sfx, Records };',
 ].join('\n');
 
 try {
@@ -342,6 +352,28 @@ assert(
   `${ringAtDeath} → ${state.ringTimer}`
 );
 assert('阵亡后不再刷新敌人', state.enemies.length === 2, '敌人=' + state.enemies.length);
+
+// 11d. 本地最高分榜
+memoryStore.clear();
+const r1 = G.Records.submit({ score: 500, kills: 20, combo: 5, result: 'over', at: 1 });
+assert('首局即纪录', r1.isBest === true);
+assert('首局排名第一', r1.rank === 1);
+
+G.Records.submit({ score: 900, kills: 40, combo: 8, result: 'win', at: 2 });
+const r3 = G.Records.submit({ score: 700, kills: 30, combo: 6, result: 'over', at: 3 });
+assert(
+  '榜单按分数倒序',
+  r3.board.map((r) => r.score).join(',') === '900,700,500',
+  r3.board.map((r) => r.score).join(',')
+);
+assert('低于最高分不算破纪录', r3.isBest === false);
+assert('本次排名正确', r3.rank === 2, 'rank=' + r3.rank);
+
+for (let i = 0; i < 5; i++) {
+  G.Records.submit({ score: 100 + i, kills: 1, combo: 1, result: 'over', at: 10 + i });
+}
+assert('榜单最多保留 5 条', G.Records.load().length === 5, '长度=' + G.Records.load().length);
+assert('最高分仍在榜首', G.Records.best().score === 900);
 
 // 12. 正常游玩不会崩
 G.startGame();
