@@ -345,9 +345,9 @@ function update() {
   let baseShake = 0;
   if (t && state.mode === 'playing') {
     if (t.hp >= 10) baseShake = 0;
-    else if (t.hp >= 7) baseShake = 0.8;    // 9—7 小抖
-    else if (t.hp >= 4) baseShake = 2.0;    // 6—4 中抖
-    else baseShake = 3.6;                   // 3—1 大抖
+    else if (t.hp >= 7) baseShake = 0.45;   // 9—7 小抖
+    else if (t.hp >= 4) baseShake = 1.1;    // 6—4 中抖
+    else baseShake = 2.0;                   // 3—1 大抖
     if (t.flying) baseShake *= 0.35;
   }
   state.shake = Math.max(state.shake * 0.86, baseShake);
@@ -465,6 +465,7 @@ function drawOverlay() {
 }
 
 function draw() {
+  beginFrameJitter(state.frame);
   ctx.save();
   if (state.shake > 0.2) {
     ctx.translate(rand(-state.shake, state.shake), rand(-state.shake, state.shake));

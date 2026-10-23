@@ -10,9 +10,24 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const lerp = (a, b, t) => a + (b - a) * t;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
-// 手抖：每次绘制都给一点点随机偏移，模拟手绘
+// 手抖：模拟手绘线条的不稳定
+// 关键：不能每帧重新随机，否则 60fps 下整个画面一直在"沸腾"，看久了很累。
+// 这里做成定格动画的做法——每 8 帧换一次抖动，约 7.5 次/秒，像手绘逐帧。
+const JITTER_HOLD_FRAMES = 8;
+let _jitterTick = 0;
+let _jitterSeed = 1;
+
+function beginFrameJitter(frameNo) {
+  // 每一帧都从本 tick 的固定种子重新开始，同一 tick 内形状完全不动
+  _jitterTick = Math.floor((frameNo || 0) / JITTER_HOLD_FRAMES);
+  _jitterSeed = (1 + _jitterTick * 7919) >>> 0;
+}
+
 function jitter(amount = 1.4) {
-  return rand(-amount, amount);
+  // 同一个 tick 内所有调用都用同一批确定的伪随机值
+  _jitterSeed = (_jitterSeed * 1664525 + 1013904223 + _jitterTick) >>> 0;
+  const r = (_jitterSeed >>> 8) / 0x1000000;
+  return (r - 0.5) * 2 * amount;
 }
 
 // 潦草直线：把一条线拆成几段，每段端点抖一下
