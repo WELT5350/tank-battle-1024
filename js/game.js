@@ -18,6 +18,7 @@ const state = {
   frame: 0,
   shake: 0,
   particles: [],
+  pops: [],
   bullets: [],
   enemies: [],
   items: [],
@@ -102,7 +103,7 @@ window.addEventListener('keydown', (e) => {
     if (now - state.lastSpaceAt < 320) {
       // 双击空格：5 血及以下进入旋转起飞
       if (t.canFly() && t.startFlight()) {
-        state.message = '画饼升天！10 秒无敌';
+        state.message = '画饼升天！无敌 10 秒';
         addShake(2.4);
       } else if (!t.flying && t.hp > 5) {
         state.message = '血量高于 3，飞不起来';
@@ -121,6 +122,13 @@ window.addEventListener('keyup', (e) => {
   if (k === 'w') input.up = false;
   if (k === 's') input.down = false;
 });
+
+// ---------- 击杀反馈 ----------
+function killFeedback(x, y) {
+  spawnDust(x, y, '#8a6a5a', 12);
+  state.pops.push({ x, y, r: 8, life: 22, max: 22 });
+  Sfx.play('kill');
+}
 
 // ---------- 抖动 ----------
 // 满血完全不抖；血量越低，事件抖动才越明显
@@ -160,6 +168,7 @@ function startGame() {
   state.frame = 0;
   state.shake = 0;
   state.particles = [];
+  state.pops = [];
   state.bullets = [];
   state.enemies = [];
   state.items = [];
@@ -227,6 +236,7 @@ function updateRound() {
   if (state.timeLeft <= 0) {
     state.timeLeft = 0;
     state.mode = 'win';
+    Sfx.play('win');
     return;
   }
 
@@ -265,6 +275,7 @@ function autoFireDuringFlight(t) {
   if (t.autoFire > 0) return;
   t.autoFire = 4;
   state.bullets.push(t.fire());
+  Sfx.play('shoot');
   addShake(0.6);
 }
 
@@ -277,8 +288,8 @@ function ramEnemies(t) {
     e.hurt(FLY_RAM_DAMAGE);
     t.ramCd = RAM_COOLDOWN_FRAMES;
     addShake(1.4);
-    spawnDust(e.x, e.y, '#8a6a5a', 12);
-    if (e.dead) state.kills++;
+    if (e.dead) { state.kills++; killFeedback(e.x, e.y); }
+    else spawnDust(e.x, e.y, '#8a6a5a', 6);
   }
 }
 
@@ -288,8 +299,7 @@ function crushFrozenEnemies(t) {
     if (e.dead) continue;
     if (!hitCircle(t, 24, e, e.r)) continue;
     e.hurt(999);
-    if (e.dead) state.kills++;
-    spawnDust(e.x, e.y, '#8a6a5a', 12);
+    if (e.dead) { state.kills++; killFeedback(e.x, e.y); }
     addShake(1.2);
   }
 }
@@ -317,14 +327,17 @@ function resolveBulletHits() {
         spawnDust(b.x, b.y, '#8a6a5a', 4);
         if (e.dead) {
           state.kills++;
-          spawnDust(e.x, e.y, '#8a6a5a', 10);
+          killFeedback(e.x, e.y);
           addShake(1.2);
+        } else {
+          Sfx.play('hit');
         }
         break;
       }
     } else if (t && hitCircle(b, b.r, t, 22)) {
       b.dead = true;
       t.damage(1);
+      Sfx.play('hurt');
       addShake(2.0);
       spawnDust(t.x, t.y, '#b5736a', 8);
     }
@@ -340,6 +353,7 @@ function cancelOpposingBullets() {
       if (!hitCircle(pb, pb.r + 2, eb, eb.r + 2)) continue;
       pb.dead = true;
       eb.dead = true;
+      Sfx.play('hit');
       spawnDust((pb.x + eb.x) / 2, (pb.y + eb.y) / 2, '#8a6a5a', 7);
       addShake(0.8);
       break;
@@ -410,6 +424,7 @@ function tryMergeUnread() {
   state.enemies = state.enemies.filter((e) => !e.dead);
   state.enemies.push(new CallBoss(clamp(cx, 60, W - 60), cy));
   state.message = '未读挤成一堆——夺命连环call！';
+  Sfx.play('merge');
   addShake(3);
   spawnDust(cx, cy, '#8a6a5a', 16);
 }
@@ -421,6 +436,7 @@ function updateItems() {
     it.update();
     if (it.dead || !t || !hitCircle(it, it.r, t, 24)) continue;
     it.dead = true;
+    Sfx.play(it.kind === 'leave' ? 'timestop' : 'pickup');
     if (it.kind === 'coffee') {
       t.hp = Math.min(t.maxHp, t.hp + 3);
       state.message = '续命一口 +3';
@@ -447,6 +463,9 @@ function updateEffects() {
   }
   state.particles = state.particles.filter((p) => p.life > 0);
 
+  for (const p of state.pops) { p.r += 1.6; p.life--; }
+  state.pops = state.pops.filter((p) => p.life > 0);
+
   // 基础抖动四档：血越少抖越狠
   let baseShake = 0;
   const t = state.tank;
@@ -467,6 +486,7 @@ function checkPlayerDown() {
   if (!t || t.hp > 0 || state.mode !== 'playing') return;
   state.mode = 'over';
   state.shake = 9;
+  Sfx.play('over');
   spawnDust(t.x, t.y, '#b5736a', 24);
 }
 
@@ -600,6 +620,18 @@ function draw() {
     ctx.globalAlpha = 1;
   }
   ctx.restore();
+
+  for (const p of state.pops) {
+    const k = p.life / p.max;
+    ctx.save();
+    ctx.globalAlpha = k;
+    ctx.strokeStyle = '#8a6a5a';
+    ctx.lineWidth = 2 + k * 1.5;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   if (state.mode === 'playing' && !(state.tank && state.tank.flying)) {
     const m = state.mouse;

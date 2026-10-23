@@ -64,6 +64,7 @@ const sandbox = {
 const source = [
   read('js/utils.js'),
   read('js/entities.js'),
+  read('js/audio.js'),
   read('js/game.js'),
   // 把内部符号导出来给测试用
   'globalThis.__game = { state, input, startGame, update, draw, spawnWave, spawnPot,' +
@@ -165,7 +166,24 @@ step(1);
 assert('锅按计时器出场', countOf('pot') === 1, '锅=' + countOf('pot'));
 assert('出场后计时器重置', state.potTimer > 800, 'potTimer=' + state.potTimer);
 
-// 9. 正常游玩不会崩
+// 9. 击杀会产生反馈波纹
+G.startGame();
+clearEnemies();
+state.pops = [];
+const prey = new G.DemandEnemy(500, 539);
+prey.speed = 0;
+state.enemies.push(prey);
+state.bullets.push(new G.Bullet(500, 539, 0, 0, 'player'));
+step(1);
+assert('击杀会产生波纹', state.pops.length > 0, '波纹=' + state.pops.length);
+assert('波纹会随时间扩大', (function () {
+  const before = state.pops[0] ? state.pops[0].r : 0;
+  step(2);
+  const after = state.pops[0] ? state.pops[0].r : before;
+  return after > before;
+})());
+
+// 10. 正常游玩不会崩
 G.startGame();
 state.timeLeft = 90;
 let crashed = null;
