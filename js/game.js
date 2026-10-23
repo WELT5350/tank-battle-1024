@@ -49,6 +49,7 @@ const state = {
   comboPop: 0,
   phase: 1,
   hidden: false, // 隐藏关：不刷小怪，只有一只便利贴 boss
+  takenNote: null, // 被 boss 带走的那张便利贴
   board: [],
   isBest: false,
   recordRank: 0,
@@ -292,6 +293,7 @@ function startGame() {
   state.comboPop = 0;
   state.phase = 1;
   state.hidden = false;
+  state.takenNote = null;
   state.isBest = false;
   state.recordRank = 0;
   state.board = Records.load();
@@ -317,6 +319,7 @@ function startHidden() {
   state.message = '加班开始';
 
   const note = NOTE_KINDS[Math.floor(Math.random() * NOTE_KINDS.length)];
+  state.takenNote = note.text; // 墙上那张跟着掉下来
   state.enemies.push(new NoteBoss(rand(220, W - 220), note));
   Sfx.setMusicSpeed(0.7);
   Sfx.play('merge');
@@ -804,12 +807,13 @@ function drawBackground() {
   ctx.lineWidth = 3;
   wobblyLine(ctx, 0, GROUND, W, GROUND, 12, 2.2);
 
+  // 隐藏关里，被 boss 带走的那张便签不再挂在墙上
   const notes = [
     { x: 120, y: 150, txt: '本周必达', color: '#fbe98f' },
     { x: 340, y: 128, txt: '再改一版', color: '#bcdcea' },
     { x: 650, y: 140, txt: '辛苦了', color: '#f6c3c8' },
     { x: 830, y: 210, txt: '对齐一下', color: '#d3e5b0' },
-  ];
+  ].filter((n) => !(state.hidden && state.takenNote === n.txt));
   for (const n of notes) {
     ctx.save();
     ctx.translate(n.x, n.y);
