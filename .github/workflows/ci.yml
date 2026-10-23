@@ -22,9 +22,13 @@ jobs:
           node --check js/entities.js
           node --check js/game.js
           node --check tests/run.js
+          node --check tests/game-loop.js
 
-      - name: 逻辑自测
+      - name: 逻辑自测（纯函数）
         run: node tests/run.js
+
+      - name: 主循环自测（无头）
+        run: node tests/game-loop.js
 
       - name: 静态资源完整性
         run: |

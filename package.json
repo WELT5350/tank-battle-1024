@@ -4,8 +4,8 @@
   "private": true,
   "description": "周一坦克 · 1024 Hackathon 解压小游戏",
   "scripts": {
-    "syntax": "node --check js/utils.js && node --check js/entities.js && node --check js/game.js",
-    "test": "node tests/run.js",
+    "syntax": "node --check js/utils.js && node --check js/entities.js && node --check js/game.js && node --check tests/run.js && node --check tests/game-loop.js",
+    "test": "node tests/run.js && node tests/game-loop.js",
     "check": "npm run syntax && npm run test",
     "start": "python3 -m http.server 8080"
   }

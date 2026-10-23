@@ -150,12 +150,19 @@ ready ──空格──> playing ──ESC──> paused
 没有第三方依赖，用 Node 自带能力跑。
 
 ```bash
-npm run check     # 语法 + 逻辑自测
+npm run check     # 语法 + 两套自测
 npm run test      # 只跑逻辑自测
 npm test          # 同上
 ```
 
-`tests/run.js` 把 `utils.js` 和 `entities.js` 拼起来丢进 `vm` 里跑，**只测纯逻辑**（数学、碰撞、血量、跳高、追踪弹转向、锅的弹跳与静置），不碰 Canvas。
+两套测试，都不碰真实浏览器：
+
+| 文件 | 覆盖 | 项数 |
+| --- | --- | --- |
+| `tests/run.js` | 纯函数与实体：数学、碰撞、血量、跳高、追踪弹转向、锅的弹跳与静置 | 40 |
+| `tests/game-loop.js` | 主循环：合体触发、时停撞击、时停冻结倒计时、暂停、锅的出场节奏、连续 600 帧不崩 | 18 |
+
+`game-loop.js` 用 Proxy 造了 Canvas 和 DOM 的桩，把 `game.js` 也跑起来，然后手动推进帧。
 
 另外还会检查：`index.html` 引用的脚本都存在、没有遗留 `console.log` / `debugger`、关键常量仍然定义着。
 
