@@ -59,7 +59,7 @@ function shoot() {
   if (state.frame - (t.lastShotFrame || 0) < 3) return;
   t.lastShotFrame = state.frame;
   state.bullets.push(t.fire());
-  state.shake = Math.max(state.shake, 1.6);
+  state.shake = Math.max(state.shake, 0.5);
   spawnDust(t.x, t.y - 6, '#8a8a8a', 2);
 }
 
@@ -68,10 +68,21 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (['a', 'd', 'w', 's', ' '].includes(k)) e.preventDefault();
 
+  if (k === 'escape') {
+    if (state.mode === 'playing') { state.mode = 'paused'; }
+    else if (state.mode === 'paused') { state.mode = 'playing'; }
+    return;
+  }
+
   if (k === 'a') input.left = true;
   if (k === 'd') input.right = true;
   if (k === 'w') input.up = true;
   if (k === 's') input.down = true;
+
+  if (state.mode === 'paused') {
+    if (k === 'r') startGame();
+    return;
+  }
 
   if (state.mode === 'ready' || state.mode === 'over' || state.mode === 'win') {
     if (k === 'r' || k === ' ' || k === 'enter') startGame();
@@ -86,7 +97,7 @@ window.addEventListener('keydown', (e) => {
       // 双击空格：5 血及以下进入旋转起飞
       if (t.canFly() && t.startFlight()) {
         state.message = '画饼升天！10 秒无敌';
-        state.shake = Math.max(state.shake, 6);
+        state.shake = Math.max(state.shake, 2.4);
       } else if (!t.flying && t.hp > 5) {
         state.message = '血量高于 5，飞不起来';
       }
@@ -159,6 +170,7 @@ function spawnWave() {
 
 // ---------- 更新 ----------
 function update() {
+  if (state.mode === 'paused') return;
   state.frame++;
 
   if (state.mode === 'playing') {
@@ -183,7 +195,7 @@ function update() {
         if (hitCircle(t, 24, e, e.r + 6)) {
           e.dead = true;
           state.kills++;
-          state.shake = Math.max(state.shake, 4);
+          state.shake = Math.max(state.shake, 1.4);
           spawnDust(e.x, e.y, '#8a6a5a', 12);
         }
       }
@@ -199,7 +211,7 @@ function update() {
         if (hitCircle(b, b.r, e, e.r)) {
           e.dead = true; b.dead = true; state.kills++;
           spawnDust(e.x, e.y, '#8a6a5a', 10);
-          state.shake = Math.max(state.shake, 3);
+          state.shake = Math.max(state.shake, 1.2);
           if (Math.random() < 0.22) {
             state.items.push(new Item(e.x, e.y, Math.random() < 0.65 ? 'coffee' : 'fish'));
           }
@@ -210,7 +222,7 @@ function update() {
       if (hitCircle(b, b.r, t, 22)) {
         b.dead = true;
         t.damage(1);
-        state.shake = Math.max(state.shake, 5);
+        state.shake = Math.max(state.shake, 2.0);
         spawnDust(t.x, t.y, '#b5736a', 8);
       }
     }
@@ -223,7 +235,7 @@ function update() {
     else if (e.kind === 'meeting' && t) e.update(t, (b) => newBullets.push(b));
     else if (e.kind === 'pot' && t) e.update(t);
     if (e.kind === 'demand' && e.dead && t) {
-      state.shake = Math.max(state.shake, 6);
+      state.shake = Math.max(state.shake, 2.4);
       spawnDust(e.x, e.y, '#b5736a', 10);
     }
   }
@@ -249,11 +261,20 @@ function update() {
 
   if (t && t.hp <= 0 && state.mode === 'playing') {
     state.mode = 'over';
-    state.shake = 10;
+    state.shake = 9;
     spawnDust(t.x, t.y, '#b5736a', 24);
   }
 
-  if (state.shake > 0) state.shake *= 0.86;
+  // 基础抖动：四档，血越少抖越狠
+  let baseShake = 0;
+  if (t && state.mode === 'playing') {
+    if (t.hp >= 10) baseShake = 0;
+    else if (t.hp >= 7) baseShake = 0.8;    // 9—7 小抖
+    else if (t.hp >= 4) baseShake = 2.0;    // 6—4 中抖
+    else baseShake = 3.6;                   // 3—1 大抖
+    if (t.flying) baseShake *= 0.35;
+  }
+  state.shake = Math.max(state.shake * 0.86, baseShake);
   if (state.message && state.frame % 220 === 0) state.message = '';
 }
 
@@ -342,12 +363,16 @@ function drawOverlay() {
     handText(ctx, 'A / D 左右移动　　W / S 起飞时上下移动', W / 2, 296, 19, '#222', 'center');
     handText(ctx, '空格 跳跃（空中可再跳一次）', W / 2, 332, 19, '#222', 'center');
     handText(ctx, '鼠标 转炮管　　左键 开炮（点得越快射得越快）', W / 2, 368, 19, '#222', 'center');
-    handText(ctx, '血量 ≤5 时双击空格：画饼升天 10 秒，无敌，撞谁谁死', W / 2, 404, 18, '#8a6a5a', 'center');
-    handText(ctx, '按 空格 开始', W / 2, 486, 22, '#b5736a', 'center');
+    handText(ctx, '血量 ≤5 时双击空格：画饼升天 10 秒，无敌，撞谁谁死', W / 2, 400, 18, '#8a6a5a', 'center');
+    handText(ctx, 'ESC 暂停', W / 2, 436, 16, '#777', 'center');
+    handText(ctx, '按 空格 开始', W / 2, 496, 22, '#b5736a', 'center');
   } else if (state.mode === 'over') {
     handText(ctx, '你倒下了', W / 2, 210, 48, '#b5736a', 'center');
     handText(ctx, `撑过了 ${ROUND_SECONDS - Math.ceil(state.timeLeft)} 秒，干掉了 ${state.kills} 个`, W / 2, 270, 20, '#555', 'center');
     handText(ctx, '按 R 再来一次', W / 2, 350, 22, '#222', 'center');
+  } else if (state.mode === 'paused') {
+    handText(ctx, '已暂停', W / 2, 240, 46, '#222', 'center');
+    handText(ctx, '按 ESC 继续，按 R 重开', W / 2, 306, 20, '#555', 'center');
   } else if (state.mode === 'win') {
     handText(ctx, '下班了！', W / 2, 210, 52, '#7d9a7b', 'center');
     handText(ctx, `今天干掉了 ${state.kills} 个职场怪`, W / 2, 272, 22, '#555', 'center');
