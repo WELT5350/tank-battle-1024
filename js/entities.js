@@ -445,11 +445,112 @@ class Item {
   }
   draw(ctx) {
     ctx.save();
-    ctx.lineWidth = 2; ctx.strokeStyle = '#1c1c1c';
-    scratchFill(ctx, this.kind === 'coffee' ? '#e6d3b8' : this.kind === 'fish' ? '#cfe0c8' : '#dfe8f0');
-    sketchRect(ctx, this.x - this.r, this.y - this.r * 0.8, this.r * 2, this.r * 1.6, 1.8);
-    const tag = this.kind === 'coffee' ? '咖' : this.kind === 'fish' ? '摸' : '假';
-    handText(ctx, tag, this.x, this.y, 13, '#333', 'center');
+    ctx.translate(this.x, this.y);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#1c1c1c';
+    ctx.lineJoin = 'round';
+    const bob = Math.sin(this.age * 0.1) * 0.8;
+    ctx.translate(0, bob);
+
+    if (this.kind === 'coffee') this.drawCup(ctx);
+    else if (this.kind === 'fish') this.drawFish(ctx);
+    else this.drawCalendar(ctx);
+
     ctx.restore();
+  }
+
+  // ---------- 咖啡杯 ----------
+  drawCup(ctx) {
+    scratchFill(ctx, '#e6d3b8');
+    // 上宽下窄的杯身
+    sketchPoly(ctx, [[-7, -7], [7, -7], [4.6, 8.5], [-4.6, 8.5]], 1.0);
+    ctx.fill();
+    ctx.stroke();
+
+    // 杯把
+    ctx.beginPath();
+    ctx.arc(7.6, 0.5, 4.2, -Math.PI * 0.5, Math.PI * 0.5);
+    ctx.stroke();
+
+    // 液面
+    handText(ctx, '', 0, 0, 1, '#333', 'center');
+    ctx.beginPath();
+    ctx.moveTo(-5.6, -3.4);
+    ctx.lineTo(5.6, -3.4);
+    ctx.stroke();
+
+    // 热气
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(90,90,90,0.55)';
+    for (const dx of [-3, 2.6]) {
+      ctx.beginPath();
+      ctx.moveTo(dx, -10);
+      ctx.quadraticCurveTo(dx + 2.4, -13, dx, -16);
+      ctx.stroke();
+    }
+  }
+
+  // ---------- 小鱼 ----------
+  drawFish(ctx) {
+    scratchFill(ctx, '#cfe0c8');
+    // 身体
+    sketchPoly(ctx, [[-10, 0], [-4, -6.4], [4, -6.4], [10, 0], [4, 6.4], [-4, 6.4]], 1.0);
+    ctx.fill();
+    ctx.stroke();
+
+    // 尾巴
+    scratchFill(ctx, '#cfe0c8');
+    sketchPoly(ctx, [[10, 0], [16.5, -5.4], [16.5, 5.4]], 1.1);
+    ctx.fill();
+    ctx.stroke();
+
+    // 眼睛
+    ctx.fillStyle = '#1c1c1c';
+    ctx.beginPath();
+    ctx.arc(-5.4, -1.4, 1.7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 鱼鳍
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-0.5, -6.2);
+    ctx.quadraticCurveTo(0.5, -8.6, 3, -6.4);
+    ctx.stroke();
+  }
+
+  // ---------- 日历 ----------
+  drawCalendar(ctx) {
+    // 纸体
+    scratchFill(ctx, '#dfe8f0');
+    sketchRect(ctx, -8.5, -7.5, 17, 16, 1.1);
+    ctx.fill();
+    ctx.stroke();
+
+    // 顶部色带
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(-8.5, -7.5, 17, 5);
+    ctx.clip();
+    ctx.fillStyle = '#b5736a';
+    ctx.fillRect(-8.5, -7.5, 17, 5);
+    ctx.restore();
+    ctx.beginPath();
+    ctx.moveTo(-8.5, -2.5);
+    ctx.lineTo(8.5, -2.5);
+    ctx.stroke();
+
+    // 两个挂环
+    ctx.beginPath();
+    ctx.moveTo(-4, -7.5); ctx.lineTo(-4, -10.5);
+    ctx.moveTo(4, -7.5); ctx.lineTo(4, -10.5);
+    ctx.stroke();
+
+    // 日期小格
+    ctx.fillStyle = '#1c1c1c';
+    for (let r = 0; r < 2; r++) {
+      for (let c = 0; c < 3; c++) {
+        ctx.fillRect(-6 + c * 4.6, 0.4 + r * 4.2, 2.2, 2.2);
+      }
+    }
   }
 }
