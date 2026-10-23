@@ -1063,6 +1063,7 @@ function draw() {
   drawEntities();
   ctx.restore();
 
+  drawMergeHints();
   drawLaser();
   drawPops();
   drawCrosshair();
@@ -1091,6 +1092,41 @@ function drawParticles() {
     ctx.fill();
     ctx.globalAlpha = 1;
   }
+}
+
+// 两只未读靠得够近时，双方身上泛起一圈脉动虚线——
+// 不写字，但让人感觉到"要出事了"
+function drawMergeHints() {
+  const unread = state.enemies.filter(
+    (e) => e.kind === 'demand' && !e.dead && e.x > 30 && e.x < W - 30
+  );
+  if (unread.length < 2) return;
+
+  const charged = new Set();
+  for (let i = 0; i < unread.length; i++) {
+    for (let j = i + 1; j < unread.length; j++) {
+      if (dist(unread[i], unread[j]) > MERGE_RADIUS) continue;
+      charged.add(unread[i]);
+      charged.add(unread[j]);
+    }
+  }
+
+  for (const e of charged) drawChargeRing(e);
+}
+
+function drawChargeRing(e) {
+  const pulse = 0.5 + 0.5 * Math.sin(state.frame * 0.18);
+
+  ctx.save();
+  ctx.strokeStyle = `rgba(181,115,106,${0.25 + pulse * 0.6})`;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.lineDashOffset = -state.frame * 0.9;
+  ctx.beginPath();
+  ctx.arc(e.x, e.y, e.r + 7 + pulse * 3, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
 }
 
 // 咖啡的激光：外粗内亮两条，带一点随机闪烁
