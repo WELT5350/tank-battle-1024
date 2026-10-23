@@ -186,10 +186,20 @@ function update() {
 
   const t = state.tank;
   if (t) {
-    t.aimAngle = Math.atan2(state.mouse.y - (t.y - t.h * 0.20), state.mouse.x - t.x);
+    if (!t.flying) {
+      t.aimAngle = Math.atan2(state.mouse.y - (t.y - t.h * 0.20), state.mouse.x - t.x);
+    }
     t.update(input);
 
     if (t.flying) {
+      // 起飞时炮管自动连射
+      t.autoFire = (t.autoFire || 0) - 1;
+      if (t.autoFire <= 0) {
+        t.autoFire = 4;
+        state.bullets.push(t.fire());
+        state.shake = Math.max(state.shake, 0.6);
+      }
+
       for (const e of state.enemies) {
         if (e.dead) continue;
         if (hitCircle(t, 24, e, e.r + 6)) {
@@ -360,12 +370,9 @@ function drawOverlay() {
   if (state.mode === 'ready') {
     handText(ctx, '周一坦克', W / 2, 150, 52, '#222', 'center');
     handText(ctx, '一个打工人熬过工作日的解压小游戏', W / 2, 200, 18, '#555', 'center');
-    handText(ctx, 'A / D 左右移动　　W / S 起飞时上下移动', W / 2, 296, 19, '#222', 'center');
-    handText(ctx, '空格 跳跃（空中可再跳一次）', W / 2, 332, 19, '#222', 'center');
-    handText(ctx, '鼠标 转炮管　　左键 开炮（点得越快射得越快）', W / 2, 368, 19, '#222', 'center');
-    handText(ctx, '血量 ≤5 时双击空格：画饼升天 10 秒，无敌，撞谁谁死', W / 2, 400, 18, '#8a6a5a', 'center');
-    handText(ctx, 'ESC 暂停', W / 2, 436, 16, '#777', 'center');
-    handText(ctx, '按 空格 开始', W / 2, 496, 22, '#b5736a', 'center');
+    handText(ctx, 'A / D 移动　　空格 跳跃　　ESC 暂停', W / 2, 320, 19, '#222', 'center');
+    handText(ctx, '鼠标 瞄准　　左键 开炮', W / 2, 356, 19, '#222', 'center');
+    handText(ctx, '按 空格 开始', W / 2, 470, 22, '#b5736a', 'center');
   } else if (state.mode === 'over') {
     handText(ctx, '你倒下了', W / 2, 210, 48, '#b5736a', 'center');
     handText(ctx, `撑过了 ${ROUND_SECONDS - Math.ceil(state.timeLeft)} 秒，干掉了 ${state.kills} 个`, W / 2, 270, 20, '#555', 'center');
@@ -401,7 +408,7 @@ function draw() {
   }
   ctx.restore();
 
-  if (state.mode === 'playing') {
+  if (state.mode === 'playing' && !(state.tank && state.tank.flying)) {
     const m = state.mouse;
     ctx.save();
     ctx.strokeStyle = 'rgba(40,40,40,.55)';

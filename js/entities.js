@@ -43,7 +43,6 @@ class PlayerTank {
     this.hurtFlash = 0;
     this.flying = false;
     this.flyTimer = 0;
-    this.roll = 0;
   }
 
   update(input) {
@@ -53,7 +52,7 @@ class PlayerTank {
       const ay = (input.down ? 1 : 0) - (input.up ? 1 : 0);
       this.vx = this.vx * 0.93 + ax * 0.85;
       this.vy = this.vy * 0.93 + ay * 0.85;
-      this.roll += 0.30;
+      this.aimAngle += 0.36;   // 炮管高速旋转
       this.flyTimer--;
       if (this.flyTimer <= 0) this.endFlight();
     } else {
@@ -62,8 +61,7 @@ class PlayerTank {
       this.vy += GRAVITY;
       if (!this.onGround) this.vy *= 0.95;
       this.vy = clamp(this.vy, -6, 16);
-      this.roll *= 0.88;
-    }
+      }
 
     this.x += this.vx;
     this.y += this.vy;
@@ -141,10 +139,7 @@ class PlayerTank {
     ctx.strokeStyle = '#1c1c1c';
     ctx.lineJoin = 'round';
 
-    // 车身整体：起飞时翻滚
     ctx.save();
-    if (this.flying) ctx.rotate(this.roll);
-
     ctx.fillStyle = '#3a3a3a';
     ctx.fillRect(-w / 2 + 2, h * 0.10, w - 4, h * 0.26);
 
