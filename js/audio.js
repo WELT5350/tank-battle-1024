@@ -97,6 +97,11 @@ const Sfx = (() => {
       tone({ freq: 90, to: 30, dur: 0.9, type: 'triangle', gain: 0.4 });
     },
     merge: () => tone({ freq: 130, to: 55, dur: 0.5, type: 'sawtooth', gain: 0.6 }),
+    // 阶段推进：两声上行的提示音
+    phase: () => {
+      tone({ freq: 620, dur: 0.12, type: 'triangle', gain: 0.45 });
+      tone({ freq: 830, dur: 0.16, type: 'triangle', gain: 0.4, delay: 0.13 });
+    },
     over: () => tone({ freq: 300, to: 55, dur: 0.8, type: 'square', gain: 0.6 }),
     boom: () => {
       noise({ dur: 0.55, gain: 0.9 });

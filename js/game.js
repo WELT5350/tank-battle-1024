@@ -3,7 +3,11 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-const ROUND_SECONDS = 90; // 一局时长
+const ROUND_SECONDS = 120; // 一局两分钟
+const PHASE_BOUNDS = [40, 80]; // 40 秒后加压，80 秒后冲刺
+const COMBO_WINDOW = 120; // 连击窗口：2 秒内再杀才算连上
+const COMBO_MAX_MULT = 5; // 连击倍率上限
+const SCORE_PER_KILL = 10; // 每杀一个的基础分
 const TIME_STOP_FRAMES = 300; // 年假：时间停止 5 秒
 const MERGE_COUNT = 3; // 几只未读合体
 const MERGE_RADIUS = 50; // 这几只之间的距离上限，太远不算一坨
@@ -35,6 +39,12 @@ const state = {
   hpFlash: 0,
   hpPop: null,
   hpShown: 10,
+  score: 0,
+  combo: 0,
+  comboTimer: 0,
+  maxCombo: 0,
+  comboPop: 0,
+  phase: 1,
 };
 
 const input = { left: false, right: false, up: false, down: false };
@@ -156,6 +166,34 @@ function killFeedback(x, y) {
   Sfx.play('kill');
 }
 
+// ---------- 连击与分数 ----------
+function comboMultiplier() {
+  if (state.combo <= 0) return 1;
+  return Math.min(1 + Math.floor((state.combo - 1) / 2), COMBO_MAX_MULT);
+}
+
+// 每次击杀都走这里：刷新连击、加分、更新纪录
+function registerKill() {
+  state.combo++;
+  state.comboTimer = COMBO_WINDOW;
+  state.comboPop = 12;
+  if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+  state.score += SCORE_PER_KILL * comboMultiplier();
+}
+
+function updateCombo() {
+  if (state.comboPop > 0) state.comboPop--;
+  if (state.comboTimer > 0) {
+    state.comboTimer--;
+    if (state.comboTimer === 0) state.combo = 0;
+  }
+}
+
+function resetCombo() {
+  state.combo = 0;
+  state.comboTimer = 0;
+}
+
 // ---------- 抖动 ----------
 // 满血完全不抖；血量越低，事件抖动才越明显
 function shakeFactor() {
@@ -207,6 +245,12 @@ function startGame() {
   state.ringTimer = 0;
   state.hpFlash = 0;
   state.hpPop = null;
+  state.score = 0;
+  state.combo = 0;
+  state.comboTimer = 0;
+  state.maxCombo = 0;
+  state.comboPop = 0;
+  state.phase = 1;
   state.tank = new PlayerTank(W / 2, GROUND - 30);
   state.hpShown = state.tank.hp;
   Telemetry.reset();
@@ -260,6 +304,7 @@ function update() {
   updateBullets(frozen);
   updateEnemies(frozen);
   updateItems();
+  updateCombo();
   updateBossRing();
   updateEffects();
   checkPlayerDown();
@@ -290,12 +335,22 @@ function updateRound() {
     return;
   }
 
+  // 三个阶段：0—40 热身，40—80 加压，80—120 冲刺
+  const elapsed = ROUND_SECONDS - state.timeLeft;
+  const phase = elapsed < PHASE_BOUNDS[0] ? 1 : elapsed < PHASE_BOUNDS[1] ? 2 : 3;
+  if (phase !== state.phase) {
+    state.phase = phase;
+    state.message = phase === 2 ? '需求开始堆上来了' : '快到下班时间，冲刺！';
+    Sfx.play('phase');
+    Telemetry.log('phase', { phase });
+  }
+
   state.spawnTimer--;
   if (state.spawnTimer <= 0) {
     spawnWave();
     Telemetry.log('spawn');
-    const pressure = clamp((ROUND_SECONDS - state.timeLeft) / ROUND_SECONDS, 0, 1);
-    state.spawnTimer = Math.round(lerp(105, 52, pressure));
+    const pressure = clamp(elapsed / ROUND_SECONDS, 0, 1);
+    state.spawnTimer = Math.round(lerp(112, 46, Math.pow(pressure, 1.4)));
   }
 
   state.potTimer--;
@@ -342,6 +397,7 @@ function ramEnemies(t) {
     addShake(1.4);
     if (e.dead) {
       state.kills++;
+      registerKill();
       killFeedback(e.x, e.y);
       Telemetry.log('kill', { kind: e.kind, by: 'ram' });
     } else spawnDust(e.x, e.y, '#8a6a5a', 6);
@@ -356,6 +412,7 @@ function crushFrozenEnemies(t) {
     e.hurt(999);
     if (e.dead) {
       state.kills++;
+      registerKill();
       killFeedback(e.x, e.y);
       Telemetry.log('kill', { kind: e.kind, by: 'crush' });
     }
@@ -386,6 +443,7 @@ function resolveBulletHits() {
         spawnDust(b.x, b.y, '#8a6a5a', 4);
         if (e.dead) {
           state.kills++;
+          registerKill();
           killFeedback(e.x, e.y);
           Telemetry.log('kill', { kind: e.kind });
           addShake(1.2);
@@ -567,6 +625,7 @@ function updateEffects() {
       state.hpFlash = 26;
       state.hpPop = { n: state.hpShown - t.hp, life: 46, max: 46 };
       addShake(1.8);
+      resetCombo();
     }
     state.hpShown = t.hp;
   }
@@ -701,8 +760,17 @@ function drawHUD() {
   }
 
   const secs = Math.ceil(state.timeLeft);
-  handText(ctx, `还有 ${secs} 秒下班`, W - 24, by + 2, 20, '#222', 'right');
-  handText(ctx, `干掉了 ${state.kills} 个`, W - 24, by + 28, 15, '#666', 'right');
+  const phaseTag = state.phase === 3 ? '（冲刺）' : '';
+  handText(ctx, `还有 ${secs} 秒下班${phaseTag}`, W - 24, by + 2, 20, '#222', 'right');
+  handText(
+    ctx,
+    `分数 ${state.score}　干掉 ${state.kills} 个`,
+    W - 24,
+    by + 28,
+    15,
+    '#666',
+    'right'
+  );
 
   if (state.timeStop > 0) {
     const fr = clamp(state.timeStop / TIME_STOP_FRAMES, 0, 1);
@@ -714,9 +782,30 @@ function drawHUD() {
     handText(ctx, '年假中 · 时间停止', W / 2, 88, 14, '#4a6a8a', 'center');
   }
 
+  // 连击：靠近坦克上方弹出，带一下放大
+  if (state.combo >= 2) {
+    const pop = state.comboPop > 0 ? 1 + (state.comboPop / 12) * 0.45 : 1;
+    const mult = comboMultiplier();
+    ctx.save();
+    ctx.translate(t ? t.x : W / 2, 470);
+    ctx.scale(pop, pop);
+    handText(ctx, `${state.combo} 连击`, 0, 0, 18, '#b5736a', 'center');
+    if (mult > 1) handText(ctx, `×${mult}`, 0, -24, 15, '#c9a86a', 'center');
+    ctx.restore();
+  }
+
   if (state.message) handText(ctx, state.message, W / 2, 44, 18, '#6d8a6d', 'center');
 
   ctx.restore();
+}
+
+// 结算评价：熬到下班才有机会拿 S
+function rankOf(survived) {
+  const s = state.score;
+  if (survived && s >= 1400) return 'S';
+  if (survived && s >= 900) return 'A';
+  if (s >= 500) return 'B';
+  return 'C';
 }
 
 // F1 调试面板：调难度时看这一屏就够了
@@ -761,24 +850,36 @@ function drawOverlay() {
     handText(ctx, '鼠标 瞄准　　左键 开炮', W / 2, 356, 19, '#222', 'center');
     handText(ctx, '按 空格 开始', W / 2, 470, 22, '#b5736a', 'center');
   } else if (state.mode === 'over') {
-    handText(ctx, '你倒下了', W / 2, 210, 48, '#b5736a', 'center');
+    handText(ctx, '你倒下了', W / 2, 190, 48, '#b5736a', 'center');
+    handText(ctx, rankOf(false), W / 2, 250, 44, '#8a6a5a', 'center');
     handText(
       ctx,
-      `撑过了 ${ROUND_SECONDS - Math.ceil(state.timeLeft)} 秒，干掉了 ${state.kills} 个`,
+      `撑过 ${ROUND_SECONDS - Math.ceil(state.timeLeft)} 秒 · 干掉 ${state.kills} 个 · 最高 ${state.maxCombo} 连击`,
       W / 2,
-      270,
-      20,
+      300,
+      17,
       '#555',
       'center'
     );
-    handText(ctx, '按 R 再来一次', W / 2, 350, 22, '#222', 'center');
+    handText(ctx, `分数 ${state.score}`, W / 2, 336, 26, '#222', 'center');
+    handText(ctx, '按 R 再来一次', W / 2, 404, 22, '#222', 'center');
   } else if (state.mode === 'paused') {
     handText(ctx, '已暂停', W / 2, 240, 46, '#222', 'center');
     handText(ctx, '按 ESC 继续，按 R 重开', W / 2, 306, 20, '#555', 'center');
   } else if (state.mode === 'win') {
-    handText(ctx, '下班了！', W / 2, 210, 52, '#7d9a7b', 'center');
-    handText(ctx, `今天干掉了 ${state.kills} 个职场怪`, W / 2, 272, 22, '#555', 'center');
-    handText(ctx, '按 R 再熬一天', W / 2, 350, 22, '#222', 'center');
+    handText(ctx, '下班了！', W / 2, 190, 52, '#7d9a7b', 'center');
+    handText(ctx, rankOf(true), W / 2, 250, 44, '#8a6a5a', 'center');
+    handText(
+      ctx,
+      `干掉 ${state.kills} 个 · 最高 ${state.maxCombo} 连击 · 剩 ${state.tank ? state.tank.hp : 0} 血`,
+      W / 2,
+      300,
+      17,
+      '#555',
+      'center'
+    );
+    handText(ctx, `分数 ${state.score}`, W / 2, 336, 26, '#222', 'center');
+    handText(ctx, '按 R 再熬一天', W / 2, 404, 22, '#222', 'center');
   }
   ctx.restore();
 }

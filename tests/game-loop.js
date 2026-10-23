@@ -53,7 +53,8 @@ const windowStub = {
 
 let clock = 1000;
 const sandbox = {
-  console,
+  // 静音 console，避免埋点汇总刷屏干扰测试输出
+  console: { log() {}, error: console.error, warn() {} },
   Math,
   Date,
   document: { getElementById: () => canvasStub },
@@ -194,6 +195,41 @@ assert(
     return after > before;
   })()
 );
+
+// 9b. 连击与分数
+G.startGame();
+clearEnemies();
+assert('开局分数为 0', state.score === 0);
+assert('开局没有连击', state.combo === 0);
+
+for (let i = 0; i < 3; i++) {
+  const prey = new G.DemandEnemy(200 + i * 100, 539);
+  prey.speed = 0;
+  state.enemies.push(prey);
+  state.bullets.push(new G.Bullet(200 + i * 100, 539, 0, 0, 'player'));
+  step(1);
+}
+assert('连杀三次记为 3 连击', state.combo === 3, 'combo=' + state.combo);
+// 10 + 10 + 20（第 3 杀倍率变 2）
+assert('分数按倍率累计', state.score === 40, 'score=' + state.score);
+
+state.tank.damage(1);
+state.hpShown = state.tank.hp + 1; // 制造一次掉血，让检测生效
+step(1);
+assert('受伤会断连击', state.combo === 0, 'combo=' + state.combo);
+
+// 连击窗口过期后自动清零
+G.startGame();
+clearEnemies();
+state.tank.x = 100; // 挪开，避免敌人撞上来导致断连击
+const prey3 = new G.DemandEnemy(500, 539);
+prey3.speed = 0;
+state.enemies.push(prey3);
+state.bullets.push(new G.Bullet(500, 539, 0, 0, 'player'));
+step(1);
+assert('击杀后有连击', state.combo === 1, `combo=${state.combo} kills=${state.kills} 敌人=${state.enemies.length}`);
+step(130);
+assert('超过 2 秒连击清零', state.combo === 0, 'combo=' + state.combo);
 
 // 10. 埋点记录
 G.startGame();
