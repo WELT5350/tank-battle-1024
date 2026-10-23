@@ -59,6 +59,18 @@ function sketchRect(ctx, x, y, w, h, amp = 1.8) {
   ctx.stroke();
 }
 
+// 潦草多边形：按给定顶点画闭合路径，每个点带抖动
+function sketchPoly(ctx, pts, amp = 1.1) {
+  ctx.beginPath();
+  pts.forEach((p, i) => {
+    const px = p[0] + jitter(amp);
+    const py = p[1] + jitter(amp);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  });
+  ctx.closePath();
+}
+
 // 潦草矩形：构建单条闭合路径，供 fill 使用
 function wobblyRect(ctx, x, y, w, h, amp = 1.8) {
   const corners = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
