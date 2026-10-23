@@ -3,39 +3,39 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tank Battle · 1024 Hackathon</title>
+  <title>周一坦克 · 打工人解压小游戏</title>
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background: #111;
-      color: #eee;
-      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      margin: 0; padding: 0; height: 100%;
+      background: #cfcfc8;
+      color: #222;
+      font-family: "Comic Sans MS", "PingFang SC", "Microsoft YaHei", cursive, sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
     }
-    #app {
-      text-align: center;
-    }
+    #wrap { text-align: center; }
     canvas {
       display: block;
-      background: #1a1a1a;
-      border: 1px solid #333;
+      background: #f3f2ec;
+      border: 3px solid #222;
+      box-shadow: 6px 6px 0 rgba(0,0,0,.25);
       image-rendering: pixelated;
+      cursor: crosshair;
     }
-    .hint {
-      margin-top: 12px;
-      font-size: 13px;
-      color: #777;
-    }
+    .tip { margin-top: 10px; font-size: 13px; color: #555; line-height: 1.7; }
+    .tip b { color: #111; }
   </style>
 </head>
 <body>
-  <div id="app">
-    <canvas id="game" width="640" height="640"></canvas>
-    <div class="hint">v0 骨架 · 游戏逻辑开发中</div>
+  <div id="wrap">
+    <canvas id="game" width="960" height="600"></canvas>
+    <div class="tip">
+      <b>A / D</b> 移动 &nbsp;·&nbsp; <b>W</b> 跳（空中再按一次＝二段跳） &nbsp;·&nbsp;
+      <b>← / →</b> 转炮管（转快了会飞） &nbsp;·&nbsp; <b>空格</b> 开炮（有后坐力）
+    </div>
   </div>
+  <script src="js/utils.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/game.js"></script>
 </body>
 </html>
