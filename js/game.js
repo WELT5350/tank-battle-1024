@@ -311,7 +311,10 @@ function update() {
   state.enemies = state.enemies.filter((e) => !e.dead);
 
   // 未读攒够了就合体成夺命连环 call
-  const unread = state.enemies.filter((e) => e.kind === 'demand');
+  // 只统计屏幕上看得见的未读，否则玩家只会看到 2 只就突然合体
+  const unread = state.enemies.filter(
+    (e) => e.kind === 'demand' && e.x > 30 && e.x < W - 30
+  );
   if (unread.length >= MERGE_COUNT) {
     const picked = unread.slice(0, MERGE_COUNT);
     const cx = picked.reduce((a, e) => a + e.x, 0) / MERGE_COUNT;
