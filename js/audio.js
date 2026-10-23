@@ -19,7 +19,7 @@ const Sfx = (() => {
       master.connect(audio.destination);
 
       musicBus = audio.createGain();
-      musicBus.gain.value = 0.34;
+      musicBus.gain.value = 0.6; // 背景音乐总音量
       musicBus.connect(master);
     } catch (e) {
       return null;
@@ -181,20 +181,14 @@ const Sfx = (() => {
         midiToFreq(chord[0] - 12) * pitchScale(),
         when,
         (STEP * 1.8) / musicSpeed,
-        0.16,
+        0.18,
         'sine'
       );
     }
     // 琶音：弱起，留空拍，避免太吵
     if (inChord !== 3 && inChord !== 7) {
       const note = chord[inChord % chord.length] + 12;
-      musicNote(
-        midiToFreq(note) * pitchScale(),
-        when,
-        (STEP * 1.2) / musicSpeed,
-        0.055,
-        'triangle'
-      );
+      musicNote(midiToFreq(note) * pitchScale(), when, (STEP * 1.2) / musicSpeed, 0.07, 'triangle');
     }
   }
 
