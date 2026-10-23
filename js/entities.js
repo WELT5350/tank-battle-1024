@@ -306,17 +306,17 @@ class MeetingEnemy extends Enemy {
 class PotEnemy extends Enemy {
   constructor(x, y, vx, vy) {
     super(x, y, 'pot');
-    this.r = 14;
+    this.r = 19;
     this.vx = vx; this.vy = vy;
     this.landed = false;
   }
   update(player) {
     this.age++;
-    this.vy += GRAVITY * 0.85;
+    this.vy += GRAVITY * 0.10;   // 锅落得很慢，才看得清是什么
     this.x += this.vx;
     this.y += this.vy;
     if (hitCircle(this, this.r, player, 22)) {
-      player.damage(13);
+      player.damage(2);
       this.dead = true;
       return;
     }
@@ -328,11 +328,20 @@ class PotEnemy extends Enemy {
   }
   draw(ctx) {
     ctx.save();
-    ctx.lineWidth = 2.2; ctx.strokeStyle = '#1c1c1c';
+
+    // 地面落点阴影：越接近地面越大越深，提前告诉玩家要落在哪
+    const alt = clamp((GROUND - this.y) / 240, 0, 1);
+    ctx.fillStyle = `rgba(60,60,60,${0.10 + (1 - alt) * 0.18})`;
+    ctx.beginPath();
+    ctx.ellipse(this.x, GROUND - 2, this.r * (1.4 - alt * 0.5), 5 * (1.4 - alt * 0.5), 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = '#1c1c1c';
     scratchFill(ctx, '#f0ece0');
     wobblyCircle(ctx, this.x, this.y, this.r, 8, 2);
     ctx.fill(); ctx.stroke();
-    handText(ctx, '锅', this.x, this.y + 1, 13, '#333', 'center');
+    handText(ctx, '锅', this.x, this.y + 1, 15, '#333', 'center');
     ctx.restore();
   }
 }

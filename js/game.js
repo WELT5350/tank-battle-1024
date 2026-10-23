@@ -180,10 +180,10 @@ function spawnWave() {
   } else {
     const fromLeft = Math.random() < 0.5;
     state.enemies.push(new PotEnemy(
-      fromLeft ? -30 : W + 30,
-      GROUND - 220,
-      (fromLeft ? 1 : -1) * rand(2.6, 4.2) * difficulty,
-      rand(-3.6, -1.6)
+      fromLeft ? -40 : W + 40,
+      GROUND - 200,
+      (fromLeft ? 1 : -1) * rand(1.3, 2.0) * difficulty,
+      rand(-2.2, -1.2)
     ));
   }
 }
