@@ -6,7 +6,7 @@ const ctx = canvas.getContext('2d');
 const ROUND_SECONDS = 90;      // 一局时长
 const TIME_STOP_FRAMES = 300;  // 年假：时间停止 5 秒
 const MERGE_COUNT = 3;         // 几只未读合体
-const MERGE_RADIUS = 78;       // 这几只之间的距离上限，太远不算一坨
+const MERGE_RADIUS = 50;       // 这几只之间的距离上限，太远不算一坨
 const FLY_RAM_DAMAGE = 3;      // 飞行撞击伤害
 const RAM_COOLDOWN_FRAMES = 18; // 两次撞击间隔，防止贴脸连续判定
 

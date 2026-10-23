@@ -7,6 +7,8 @@ const MAX_HP = 10;              // 精神状态上限
 const FLY_FRAMES = 600;         // 画饼升天持续帧数（10 秒 @60fps）
 const JUMP_VELOCITY = -14.6;
 const BULLET_SPEED = 12.5;
+const POT_DAMAGE = 2;                                  // 锅碰到扣的血
+const POT_BOUNCE_SPEEDS = [3.9, 2.9, 2.1];             // 每次弹起的初速，逐次递减
 
 class Bullet {
   constructor(x, y, vx, vy, owner) {
@@ -308,6 +310,7 @@ class PotEnemy extends Enemy {
     this.bounced = false;
     this.settled = false;
     this.restLife = 0;
+    this.bounceLeft = POT_BOUNCE_SPEEDS.length;
   }
   update(player) {
     this.age++;
@@ -316,7 +319,7 @@ class PotEnemy extends Enemy {
     if (this.settled) {
       this.restLife++;
       if (hitCircle(this, this.r, player, 22)) {
-        player.damage(1);
+        player.damage(POT_DAMAGE);
         this.dead = true;
         return;
       }
@@ -324,26 +327,26 @@ class PotEnemy extends Enemy {
       return;
     }
 
-    // 弹跳阶段用正常重力，飘落阶段用很小的重力
-    this.vy += this.bounced ? GRAVITY * 0.7 : GRAVITY * 0.10;
+    // 弹跳阶段用较缓的重力，弹得慢一点，不会一下子砸下来
+    this.vy += this.bounced ? GRAVITY * 0.50 : GRAVITY * 0.10;
     this.x += this.vx;
     this.y += this.vy;
 
     if (hitCircle(this, this.r, player, 22)) {
-      player.damage(2);
+      player.damage(POT_DAMAGE);
       this.dead = true;
       return;
     }
 
     if (this.y > GROUND - this.r) {
       this.y = GROUND - this.r;
-      if (!this.bounced) {
-        // 第一次落地：弹一下
+      if (this.bounceLeft > 0) {
+        // 每弹一次高度递减，弹三次后彻底躺下
         this.bounced = true;
-        this.vy = -3.2;
-        this.vx *= 0.5;
+        this.vy = -POT_BOUNCE_SPEEDS[POT_BOUNCE_SPEEDS.length - this.bounceLeft];
+        this.bounceLeft--;
+        this.vx *= 0.6;
       } else {
-        // 第二次落地：停住不动
         this.settled = true;
         this.vx = 0;
         this.vy = 0;
