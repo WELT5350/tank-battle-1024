@@ -4,6 +4,10 @@
 
 const shared = {
   BULLET_SPEED: 'readonly',
+  COMBO_MAX_MULT: 'readonly',
+  COMBO_WINDOW: 'readonly',
+  PHASE_BOUNDS: 'readonly',
+  SCORE_PER_KILL: 'readonly',
   Bullet: 'readonly',
   CallBoss: 'readonly',
   DemandEnemy: 'readonly',
@@ -29,6 +33,11 @@ const shared = {
   RAM_COOLDOWN_FRAMES: 'readonly',
   RING_INTERVAL_FRAMES: 'readonly',
   ROUND_SECONDS: 'readonly',
+  comboMultiplier: 'readonly',
+  rankOf: 'readonly',
+  registerKill: 'readonly',
+  resetCombo: 'readonly',
+  updateCombo: 'readonly',
   STEP_MS: 'readonly',
   Sfx: 'readonly',
   TIME_STOP_FRAMES: 'readonly',
