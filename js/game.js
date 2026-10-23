@@ -32,6 +32,9 @@ const state = {
   potTimer: 900,
   debug: false,
   ringTimer: 0,
+  hpFlash: 0,
+  hpPop: null,
+  hpShown: 10,
 };
 
 const input = { left: false, right: false, up: false, down: false };
@@ -201,7 +204,10 @@ function startGame() {
   state.timeStop = 0;
   state.potTimer = POT_INTERVAL_FRAMES;
   state.ringTimer = 0;
+  state.hpFlash = 0;
+  state.hpPop = null;
   state.tank = new PlayerTank(W / 2, GROUND - 30);
+  state.hpShown = state.tank.hp;
   Telemetry.reset();
   Telemetry.log('round_start');
   Sfx.startMusic();
@@ -253,7 +259,10 @@ function update() {
 function updateTimeStop(frozen) {
   if (!frozen) return;
   state.timeStop--;
-  if (state.timeStop === 0) state.message = '年假用完，继续上班';
+  if (state.timeStop === 0) {
+    state.message = '年假用完，继续上班';
+    Sfx.setMusicSpeed(1);
+  }
 }
 
 // ---------- 回合：倒计时与刷怪 ----------
@@ -482,6 +491,7 @@ function updateItems() {
       state.message = '摸鱼 3 秒';
     } else {
       state.timeStop = TIME_STOP_FRAMES;
+      Sfx.setMusicSpeed(0.42);
       state.message = '一天年假！时间停止 5 秒';
       addShake(4);
     }
@@ -530,6 +540,18 @@ function updateEffects() {
     if (t.flying) baseShake *= 0.35;
   }
   state.shake = Math.max(state.shake * 0.86, baseShake);
+
+  // 血量变化检测：任何来源的掉血都会触发血条反馈
+  if (t) {
+    if (t.hp < state.hpShown) {
+      state.hpFlash = 26;
+      state.hpPop = { n: state.hpShown - t.hp, life: 46, max: 46 };
+      addShake(1.8);
+    }
+    state.hpShown = t.hp;
+  }
+  if (state.hpFlash > 0) state.hpFlash--;
+  if (state.hpPop && state.hpPop.life > 0) state.hpPop.life--;
 
   if (state.message && state.frame % 220 === 0) state.message = '';
 }
@@ -588,8 +610,13 @@ function drawHUD() {
   const hp = t ? t.hp : 10;
   const fill = hp <= 3 ? '#b5736a' : hp <= 5 ? '#c9a86a' : '#7d9a7b';
 
+  // 挨打时血条会抖一下、闪一下
+  const flash = state.hpFlash > 0 ? state.hpFlash / 26 : 0;
+  ctx.save();
+  if (flash > 0) ctx.translate(rand(-3, 3) * flash, rand(-2, 2) * flash);
+
   ctx.strokeStyle = '#1c1c1c';
-  ctx.lineWidth = 2.4;
+  ctx.lineWidth = 2.4 + flash * 1.8;
   sketchStroke(ctx, bx, by, barW, barH, 1.6);
 
   const inset = 3;
@@ -598,7 +625,36 @@ function drawHUD() {
     ctx.fillStyle = fill;
     ctx.fillRect(bx + inset, by + inset, (barW - inset * 2) * ratio, barH - inset * 2);
   }
+
+  // 掉血瞬间整条盖一层白，损失的那一段单独标红
+  if (flash > 0) {
+    ctx.fillStyle = `rgba(255,255,255,${0.45 * flash})`;
+    ctx.fillRect(bx + inset, by + inset, (barW - inset * 2) * ratio, barH - inset * 2);
+
+    const lost = state.hpPop ? state.hpPop.n / 10 : 0;
+    if (lost > 0) {
+      ctx.fillStyle = `rgba(181,115,106,${0.9 * flash})`;
+      ctx.fillRect(
+        bx + inset + (barW - inset * 2) * ratio,
+        by + inset,
+        (barW - inset * 2) * lost,
+        barH - inset * 2
+      );
+    }
+  }
+  ctx.restore();
+
   handText(ctx, '精神状态', bx, by + barH + 16, 14, '#444');
+
+  // 飘起来的扣血数字
+  if (state.hpPop && state.hpPop.life > 0) {
+    const k = state.hpPop.life / state.hpPop.max;
+    ctx.save();
+    ctx.globalAlpha = k;
+    const dy = (1 - k) * 26;
+    handText(ctx, `-${state.hpPop.n}`, bx + barW + 18, by + 14 - dy, 20, '#b5736a', 'left');
+    ctx.restore();
+  }
 
   if (t && t.flying) {
     const fr = clamp(t.flyTimer / FLY_FRAMES, 0, 1);
