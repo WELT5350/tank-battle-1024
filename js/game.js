@@ -196,212 +196,278 @@ function spawnPot() {
 }
 
 // ---------- 更新 ----------
+// 一帧的推进拆成若干小步，每步只干一件事
 function update() {
   if (state.mode === 'paused') return;
   state.frame++;
 
   const frozen = state.timeStop > 0;
-  if (frozen) {
-    state.timeStop--;
-    if (state.timeStop === 0) state.message = '年假用完，继续上班';
+  updateTimeStop(frozen);
+  if (!frozen) updateRound();
+  updateTank(frozen);
+  updateBullets(frozen);
+  updateEnemies(frozen);
+  updateItems();
+  updateEffects();
+  checkPlayerDown();
+}
+
+// ---------- 时间停止 ----------
+function updateTimeStop(frozen) {
+  if (!frozen) return;
+  state.timeStop--;
+  if (state.timeStop === 0) state.message = '年假用完，继续上班';
+}
+
+// ---------- 回合：倒计时与刷怪 ----------
+function updateRound() {
+  if (state.mode !== 'playing') return;
+
+  state.timeLeft -= 1 / 60;
+  if (state.timeLeft <= 0) {
+    state.timeLeft = 0;
+    state.mode = 'win';
+    return;
   }
 
-  if (state.mode === 'playing' && !frozen) {
-    state.timeLeft -= 1 / 60;
-    if (state.timeLeft <= 0) { state.timeLeft = 0; state.mode = 'win'; }
-    state.spawnTimer--;
-    if (state.spawnTimer <= 0) {
-      spawnWave();
-      const pressure = clamp((ROUND_SECONDS - state.timeLeft) / ROUND_SECONDS, 0, 1);
-      state.spawnTimer = Math.round(lerp(105, 52, pressure));
-    }
-
-    state.potTimer--;
-    if (state.potTimer <= 0) {
-      spawnPot();
-      state.potTimer = POT_INTERVAL_FRAMES;
-    }
+  state.spawnTimer--;
+  if (state.spawnTimer <= 0) {
+    spawnWave();
+    const pressure = clamp((ROUND_SECONDS - state.timeLeft) / ROUND_SECONDS, 0, 1);
+    state.spawnTimer = Math.round(lerp(105, 52, pressure));
   }
 
+  state.potTimer--;
+  if (state.potTimer <= 0) {
+    spawnPot();
+    state.potTimer = POT_INTERVAL_FRAMES;
+  }
+}
+
+// ---------- 玩家 ----------
+function updateTank(frozen) {
   const t = state.tank;
-  if (t) {
-    if (!t.flying) {
-      t.aimAngle = Math.atan2(state.mouse.y - (t.y - t.h * 0.20), state.mouse.x - t.x);
-    }
-    t.update(input);
+  if (!t) return;
 
-    if (t.flying) {
-      // 起飞时炮管自动连射
-      t.autoFire = (t.autoFire || 0) - 1;
-      if (t.autoFire <= 0) {
-        t.autoFire = 4;
-        state.bullets.push(t.fire());
-        addShake(0.6);
-      }
-
-      // 撞击按伤害算，且有冷却，否则贴着 boss 一帧就能把它撞没
-      if (t.ramCd > 0) t.ramCd--;
-      for (const e of state.enemies) {
-        if (e.dead || t.ramCd > 0) continue;
-        if (hitCircle(t, 24, e, e.r + 6)) {
-          e.hurt(FLY_RAM_DAMAGE);
-          t.ramCd = RAM_COOLDOWN_FRAMES;
-          addShake(1.4);
-          spawnDust(e.x, e.y, '#8a6a5a', 12);
-          if (e.dead) state.kills++;
-        }
-      }
-    }
+  if (!t.flying) {
+    t.aimAngle = Math.atan2(state.mouse.y - (t.y - t.h * 0.20), state.mouse.x - t.x);
   }
+  t.update(input);
 
-  // 时停期间玩家可以靠撞击清场，否则碰到敌人完全没有反馈
-  if (t && frozen) {
-    for (const e of state.enemies) {
-      if (e.dead) continue;
-      if (hitCircle(t, 24, e, e.r)) {
-        e.hurt(999);
-        if (e.dead) state.kills++;
-        spawnDust(e.x, e.y, '#8a6a5a', 12);
-        addShake(1.2);
-      }
-    }
+  if (t.flying) autoFireDuringFlight(t);
+  if (frozen) crushFrozenEnemies(t);
+  else if (t.flying) ramEnemies(t);
+}
+
+// 起飞时炮管自动连射
+function autoFireDuringFlight(t) {
+  t.autoFire = (t.autoFire || 0) - 1;
+  if (t.autoFire > 0) return;
+  t.autoFire = 4;
+  state.bullets.push(t.fire());
+  addShake(0.6);
+}
+
+// 飞行撞击按伤害算，且有冷却，否则贴着 boss 一帧就能把它撞没
+function ramEnemies(t) {
+  if (t.ramCd > 0) t.ramCd--;
+  for (const e of state.enemies) {
+    if (e.dead || t.ramCd > 0) continue;
+    if (!hitCircle(t, 24, e, e.r + 6)) continue;
+    e.hurt(FLY_RAM_DAMAGE);
+    t.ramCd = RAM_COOLDOWN_FRAMES;
+    addShake(1.4);
+    spawnDust(e.x, e.y, '#8a6a5a', 12);
+    if (e.dead) state.kills++;
   }
+}
 
-  for (const b of state.bullets) { if (!(frozen && b.owner === 'enemy')) b.update(); }
+// 时停期间撞到谁就撞碎谁，否则碰到敌人完全没有反馈
+function crushFrozenEnemies(t) {
+  for (const e of state.enemies) {
+    if (e.dead) continue;
+    if (!hitCircle(t, 24, e, e.r)) continue;
+    e.hurt(999);
+    if (e.dead) state.kills++;
+    spawnDust(e.x, e.y, '#8a6a5a', 12);
+    addShake(1.2);
+  }
+}
+
+// ---------- 子弹 ----------
+function updateBullets(frozen) {
+  for (const b of state.bullets) {
+    if (!(frozen && b.owner === 'enemy')) b.update();
+  }
+  resolveBulletHits();
+  cancelOpposingBullets();
+  state.bullets = state.bullets.filter((b) => !b.dead);
+}
+
+function resolveBulletHits() {
+  const t = state.tank;
   for (const b of state.bullets) {
     if (b.dead) continue;
+
     if (b.owner === 'player') {
       for (const e of state.enemies) {
-        if (e.dead) continue;
-        if (hitCircle(b, b.r, e, e.r)) {
-          b.dead = true;
-          e.hurt(1);
-          spawnDust(b.x, b.y, '#8a6a5a', 4);
-          if (e.dead) {
-            state.kills++;
-            spawnDust(e.x, e.y, '#8a6a5a', 10);
-            addShake(1.2);
-          }
-          break;
-        }
-      }
-    } else if (t) {
-      if (hitCircle(b, b.r, t, 22)) {
+        if (e.dead || !hitCircle(b, b.r, e, e.r)) continue;
         b.dead = true;
-        t.damage(1);
-        addShake(2.0);
-        spawnDust(t.x, t.y, '#b5736a', 8);
+        e.hurt(1);
+        spawnDust(b.x, b.y, '#8a6a5a', 4);
+        if (e.dead) {
+          state.kills++;
+          spawnDust(e.x, e.y, '#8a6a5a', 10);
+          addShake(1.2);
+        }
+        break;
       }
+    } else if (t && hitCircle(b, b.r, t, 22)) {
+      b.dead = true;
+      t.damage(1);
+      addShake(2.0);
+      spawnDust(t.x, t.y, '#b5736a', 8);
     }
   }
-  // 双方子弹对撞抵消
+}
+
+// 玩家子弹和敌方子弹相撞，双方一起消失
+function cancelOpposingBullets() {
   for (const pb of state.bullets) {
     if (pb.dead || pb.owner !== 'player') continue;
     for (const eb of state.bullets) {
       if (eb.dead || eb.owner !== 'enemy') continue;
-      if (hitCircle(pb, pb.r + 2, eb, eb.r + 2)) {
-        pb.dead = true;
-        eb.dead = true;
-        spawnDust((pb.x + eb.x) / 2, (pb.y + eb.y) / 2, '#8a6a5a', 7);
-        addShake(0.8);
-        break;
+      if (!hitCircle(pb, pb.r + 2, eb, eb.r + 2)) continue;
+      pb.dead = true;
+      eb.dead = true;
+      spawnDust((pb.x + eb.x) / 2, (pb.y + eb.y) / 2, '#8a6a5a', 7);
+      addShake(0.8);
+      break;
+    }
+  }
+}
+
+// ---------- 敌人 ----------
+function updateEnemies(frozen) {
+  const t = state.tank;
+
+  if (!frozen) {
+    const spawned = [];
+    for (const e of state.enemies) {
+      if (e.kind === 'meeting' && t) e.update(t, (b) => spawned.push(b));
+      else if (t) e.update(t);
+
+      if (e.kind === 'demand' && e.dead && t) {
+        addShake(2.4);
+        spawnDust(e.x, e.y, '#b5736a', 10);
       }
     }
+    state.bullets.push(...spawned);
   }
 
-  state.bullets = state.bullets.filter((b) => !b.dead);
+  dropLoot();
+  state.enemies = state.enemies.filter((e) => !e.dead);
+  tryMergeUnread();
+}
 
-  const newBullets = [];
-  if (!frozen) for (const e of state.enemies) {
-    if (e.kind === 'demand' && t) e.update(t);
-    else if (e.kind === 'meeting' && t) e.update(t, (b) => newBullets.push(b));
-    else if (e.kind === 'pot' && t) e.update(t);
-    else if (e.kind === 'boss' && t) e.update(t);
-    if (e.kind === 'demand' && e.dead && t) {
-      addShake(2.4);
-      spawnDust(e.x, e.y, '#b5736a', 10);
-    }
-  }
-  state.bullets.push(...newBullets);
-  // 掉落统一在这里结算，不管是子弹打死还是撞死的
+// 掉落统一结算，不管是子弹打死、撞死还是被时停撞碎
+function dropLoot() {
   for (const e of state.enemies) {
     if (!e.dead || e.dropDone) continue;
     e.dropDone = true;
+
     if (e.kind === 'boss') {
-      state.items.push(new Item(e.x, e.y, 'leave'));      // 夺命连环 call 必掉年假
+      state.items.push(new Item(e.x, e.y, 'leave'));   // 夺命连环 call 必掉年假
     } else if (e.kind === 'meeting' && Math.random() < 0.38) {
       state.items.push(new Item(e.x, e.y, Math.random() < 0.65 ? 'coffee' : 'fish'));
     }
     // 地面的未读和锅不掉落
   }
-  state.enemies = state.enemies.filter((e) => !e.dead);
+}
 
-  // 未读攒够了就合体成夺命连环 call
-  // 只统计屏幕上看得见的未读
+// 三只未读挤成一堆就合体
+function tryMergeUnread() {
   const unread = state.enemies.filter(
     (e) => e.kind === 'demand' && !e.dead && e.x > 30 && e.x < W - 30
   );
+  if (unread.length < MERGE_COUNT) return;
 
-  // 必须挤在一起才合体：以每只为圆心找邻居，凑够就合并最近的那几只
-  if (unread.length >= MERGE_COUNT) {
-    let picked = null;
-    for (const anchor of unread) {
-      const near = unread
-        .filter((e) => e !== anchor && dist(anchor, e) <= MERGE_RADIUS)
-        .sort((a, b) => dist(anchor, a) - dist(anchor, b));
-      if (near.length + 1 >= MERGE_COUNT) {
-        picked = [anchor, ...near.slice(0, MERGE_COUNT - 1)];
-        break;
-      }
-    }
-
-    if (picked) {
-      const cx = picked.reduce((a, e) => a + e.x, 0) / MERGE_COUNT;
-      const cy = picked.reduce((a, e) => a + e.y, 0) / MERGE_COUNT;
-      for (const e of picked) e.dead = true;
-      state.enemies = state.enemies.filter((e) => !e.dead);
-      state.enemies.push(new CallBoss(clamp(cx, 60, W - 60), cy));
-      state.message = '未读挤成一堆——夺命连环call！';
-      addShake(3);
-      spawnDust(cx, cy, '#8a6a5a', 16);
+  let picked = null;
+  for (const anchor of unread) {
+    const near = unread
+      .filter((e) => e !== anchor && dist(anchor, e) <= MERGE_RADIUS)
+      .sort((a, b) => dist(anchor, a) - dist(anchor, b));
+    if (near.length + 1 >= MERGE_COUNT) {
+      picked = [anchor, ...near.slice(0, MERGE_COUNT - 1)];
+      break;
     }
   }
+  if (!picked) return;
 
-  for (const it of state.items) it.update();
+  const cx = picked.reduce((a, e) => a + e.x, 0) / MERGE_COUNT;
+  const cy = picked.reduce((a, e) => a + e.y, 0) / MERGE_COUNT;
+  for (const e of picked) e.dead = true;
+  state.enemies = state.enemies.filter((e) => !e.dead);
+  state.enemies.push(new CallBoss(clamp(cx, 60, W - 60), cy));
+  state.message = '未读挤成一堆——夺命连环call！';
+  addShake(3);
+  spawnDust(cx, cy, '#8a6a5a', 16);
+}
+
+// ---------- 道具 ----------
+function updateItems() {
+  const t = state.tank;
   for (const it of state.items) {
-    if (it.dead || !t) continue;
-    if (hitCircle(it, it.r, t, 24)) {
-      it.dead = true;
-      if (it.kind === 'coffee') { t.hp = Math.min(t.maxHp, t.hp + 3); state.message = '续命一口 +3'; }
-      else if (it.kind === 'fish') { t.invincible = Math.max(t.invincible, 180); state.message = '摸鱼 3 秒'; }
-      else { state.timeStop = TIME_STOP_FRAMES; state.message = '一天年假！时间停止 5 秒'; addShake(4); }
-      spawnDust(it.x, it.y, '#7d9a7b', 8);
+    it.update();
+    if (it.dead || !t || !hitCircle(it, it.r, t, 24)) continue;
+    it.dead = true;
+    if (it.kind === 'coffee') {
+      t.hp = Math.min(t.maxHp, t.hp + 3);
+      state.message = '续命一口 +3';
+    } else if (it.kind === 'fish') {
+      t.invincible = Math.max(t.invincible, 180);
+      state.message = '摸鱼 3 秒';
+    } else {
+      state.timeStop = TIME_STOP_FRAMES;
+      state.message = '一天年假！时间停止 5 秒';
+      addShake(4);
     }
+    spawnDust(it.x, it.y, '#7d9a7b', 8);
   }
   state.items = state.items.filter((it) => !it.dead);
+}
 
+// ---------- 粒子与抖动 ----------
+function updateEffects() {
   for (const p of state.particles) {
-    p.x += p.vx; p.y += p.vy; p.vy += 0.16; p.life--;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.16;
+    p.life--;
   }
   state.particles = state.particles.filter((p) => p.life > 0);
 
-  if (t && t.hp <= 0 && state.mode === 'playing') {
-    state.mode = 'over';
-    state.shake = 9;
-    spawnDust(t.x, t.y, '#b5736a', 24);
-  }
-
-  // 基础抖动：四档，血越少抖越狠
+  // 基础抖动四档：血越少抖越狠
   let baseShake = 0;
+  const t = state.tank;
   if (t && state.mode === 'playing') {
     if (t.hp >= 10) baseShake = 0;
-    else if (t.hp >= 7) baseShake = 0.45;   // 9—7 小抖
-    else if (t.hp >= 4) baseShake = 1.1;    // 6—4 中抖
-    else baseShake = 2.0;                   // 3—1 大抖
+    else if (t.hp >= 7) baseShake = 0.45;
+    else if (t.hp >= 4) baseShake = 1.1;
+    else baseShake = 2.0;
     if (t.flying) baseShake *= 0.35;
   }
   state.shake = Math.max(state.shake * 0.86, baseShake);
+
   if (state.message && state.frame % 220 === 0) state.message = '';
+}
+
+function checkPlayerDown() {
+  const t = state.tank;
+  if (!t || t.hp > 0 || state.mode !== 'playing') return;
+  state.mode = 'over';
+  state.shake = 9;
+  spawnDust(t.x, t.y, '#b5736a', 24);
 }
 
 // ---------- 绘制 ----------
