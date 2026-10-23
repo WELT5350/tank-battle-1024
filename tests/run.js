@@ -116,7 +116,7 @@ const harness = `
   }
   T('锅会落地', landed);
   T('锅弹起后静置', pot.settled === true);
-  T('弹跳高于 4px', (GROUND - pot.r) - minAfterLand > 4,
+  T('弹跳高于 20px', (GROUND - pot.r) - minAfterLand > 20,
     '弹起 ' + Math.round((GROUND - pot.r) - minAfterLand) + 'px');
 
   // 13. 踩到落定的锅：扣 1 血，锅碎掉
@@ -126,7 +126,7 @@ const harness = `
   restingPot.settled = true;
   restingPot.bounced = true;
   restingPot.update(tank6);
-  T('踩到落定的锅扣 1 血', tank6.hp === MAX_HP - 1, 'hp=' + tank6.hp);
+  T('踩到落定的锅扣 2 血', tank6.hp === MAX_HP - 2, 'hp=' + tank6.hp);
   T('踩过之后锅碎掉', restingPot.dead === true);
 
   // 13b. 落定的锅放着不动会自己消失
