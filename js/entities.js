@@ -348,8 +348,8 @@ class CallBoss extends Enemy {
   constructor(x, y) {
     super(x, y, 'boss');
     this.r = 26;
-    this.hp = 15;
-    this.maxHp = 15;
+    this.hp = 10;
+    this.maxHp = 10;
     this.speed = 1.35;
     this.vx = 0;
     this.hitCd = 0;
@@ -378,52 +378,72 @@ class CallBoss extends Enemy {
   draw(ctx) {
     const shakeX = this.flash > 0 ? rand(-2, 2) : 0;
     ctx.save();
-    ctx.translate(shakeX, 0);
-    ctx.lineWidth = 2.8;
+    ctx.translate(this.x + shakeX, this.y);
+    ctx.lineWidth = 2.6;
     ctx.strokeStyle = '#1c1c1c';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
-    // 身体
-    ctx.fillStyle = this.flash > 0 ? '#e3b7ae' : '#efe9dc';
-    sketchRect(ctx, this.x - this.r, this.y - this.r * 0.66, this.r * 2, this.r * 1.32, 2.4);
-
-    // 三个小眼睛（未读合体的痕迹）
-    ctx.fillStyle = '#f3f2ec';
-    for (const dx of [-12, 0, 12]) {
-      ctx.beginPath(); ctx.arc(this.x + dx, this.y - 4, 4.6, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#1c1c1c'; ctx.lineWidth = 1.4; ctx.stroke();
-      ctx.fillStyle = '#111';
-      ctx.beginPath(); ctx.arc(this.x + dx + 0.8, this.y - 4, 1.7, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#f3f2ec';
-    }
-
-    // 来电波纹：身体两侧的振铃
+    // 两侧振铃声波
+    const ringPhase = (this.age % 30) / 30;
     ctx.strokeStyle = '#8a6a5a';
     ctx.lineWidth = 2;
-    const ringPhase = (this.age % 30) / 30;
     for (let i = 0; i < 2; i++) {
-      const rr = 6 + i * 7 + ringPhase * 9;
+      const rr = 7 + i * 7 + ringPhase * 9;
       ctx.globalAlpha = 1 - ringPhase * 0.8;
       ctx.beginPath();
-      ctx.arc(this.x - this.r - 4, this.y - 2, rr, Math.PI * 0.55, Math.PI * 1.45);
+      ctx.arc(-26, -2, rr, Math.PI * 0.55, Math.PI * 1.45);
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(this.x + this.r + 4, this.y - 2, rr, Math.PI * 1.55, Math.PI * 0.45);
+      ctx.arc(26, -2, rr, Math.PI * 1.55, Math.PI * 0.45);
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
 
-    // 血条
+    // 手柄：一条粗弧，两端正好接上听筒
+    ctx.beginPath();
+    ctx.arc(0, 4, 16, Math.PI * 1.10, Math.PI * 1.90);
     ctx.strokeStyle = '#1c1c1c';
+    ctx.lineWidth = 6.5;
+    ctx.stroke();
+
+    // 两端听筒 / 话筒
+    ctx.lineWidth = 2.6;
+    for (const side of [-1, 1]) {
+      ctx.save();
+      ctx.translate(side * 16, -2);
+      ctx.rotate(side * 0.18);
+      scratchFill(ctx, '#efe9dc');
+      sketchRect(ctx, -6, -10, 12, 20, 1.0);
+      ctx.fill();
+      ctx.stroke();
+      // 听筒网面
+      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = 'rgba(60,60,60,0.55)';
+      for (let d = -5; d <= 5; d += 5) {
+        ctx.beginPath();
+        ctx.moveTo(-3, d);
+        ctx.lineTo(3, d);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = '#1c1c1c';
+      ctx.lineWidth = 2.6;
+      ctx.restore();
+    }
+
+    // 血条
     ctx.lineWidth = 1.6;
-    const bw = this.r * 2, bh = 5;
-    const bx = this.x - this.r, by = this.y - this.r * 0.66 - 20;
+    const bw = 48, bh = 5, bx = -24, by = -34;
     ctx.strokeRect(bx, by, bw, bh);
     ctx.fillStyle = '#b5736a';
     ctx.fillRect(bx + 1, by + 1, (bw - 2) * clamp(this.hp / this.maxHp, 0, 1), bh - 2);
 
-    handText(ctx, this.label, this.x, this.y - this.r * 0.66 - 32, 12, '#8a6a5a', 'center');
+    // 名字
+    handText(ctx, this.label, 0, -46, 12, '#8a6a5a', 'center');
+
     ctx.restore();
   }
+
 }
 
 // 道具
