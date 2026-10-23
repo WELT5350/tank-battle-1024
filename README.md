@@ -90,9 +90,10 @@ python3 -m http.server 8080
 [![CI](https://github.com/WELT5350/tank-battle-1024/actions/workflows/ci.yml/badge.svg)](https://github.com/WELT5350/tank-battle-1024/actions/workflows/ci.yml)
 
 ```
-index.html        入口，640×600 画布 + 样式
+index.html        入口，960×600 画布 + 样式
 js/utils.js       手绘风绘制工具（抖动线、潦草矩形、手写体）、数学工具
 js/entities.js    实体：PlayerTank / Bullet / Enemy 及其子类 / Item
+js/audio.js       音效：用 WebAudio 现场合成，不加载任何音频文件
 js/game.js        主循环、输入、状态机、刷怪、HUD、界面切换
 ```
 
@@ -101,6 +102,7 @@ js/game.js        主循环、输入、状态机、刷怪、HUD、界面切换
 | 模块 | 只管什么 |
 | --- | --- |
 | `utils.js` | 画线和数学，不知道任何游戏规则 |
+| `audio.js` | 只负责发声，不认识游戏对象 |
 | `entities.js` | 单个实体的状态与行为，不知道关卡和界面 |
 | `game.js` | 编排：读输入、更新世界、判定碰撞、画界面 |
 
@@ -160,7 +162,7 @@ npm test          # 同上
 | 文件 | 覆盖 | 项数 |
 | --- | --- | --- |
 | `tests/run.js` | 纯函数与实体：数学、碰撞、血量、跳高、追踪弹转向、锅的弹跳与静置 | 40 |
-| `tests/game-loop.js` | 主循环：合体触发、时停撞击、时停冻结倒计时、暂停、锅的出场节奏、连续 600 帧不崩 | 18 |
+| `tests/game-loop.js` | 主循环：合体触发、时停撞击、时停冻结倒计时、暂停、锅的出场节奏、击杀反馈、连续 600 帧不崩 | 20 |
 
 `game-loop.js` 用 Proxy 造了 Canvas 和 DOM 的桩，把 `game.js` 也跑起来，然后手动推进帧。
 
