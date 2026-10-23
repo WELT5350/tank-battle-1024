@@ -85,8 +85,21 @@ window.addEventListener('keydown', (e) => {
   }
 
   if (k === 'escape') {
-    if (state.mode === 'playing') { state.mode = 'paused'; }
-    else if (state.mode === 'paused') { state.mode = 'playing'; }
+    if (state.mode === 'playing') {
+      state.mode = 'paused';
+      Sfx.stopMusic();
+    } else if (state.mode === 'paused') {
+      state.mode = 'playing';
+      Sfx.startMusic();
+    }
+    return;
+  }
+
+  if (k === 'm') {
+    const on = Sfx.toggle();
+    if (on && state.mode === 'playing') Sfx.startMusic();
+    if (!on) Sfx.stopMusic();
+    state.message = on ? '声音开' : '声音关';
     return;
   }
 
@@ -191,6 +204,7 @@ function startGame() {
   state.tank = new PlayerTank(W / 2, GROUND - 30);
   Telemetry.reset();
   Telemetry.log('round_start');
+  Sfx.startMusic();
 }
 
 function spawnWave() {
@@ -251,6 +265,7 @@ function updateRound() {
     state.timeLeft = 0;
     state.mode = 'win';
     Telemetry.log('win', { kills: state.kills });
+    Sfx.stopMusic();
     Telemetry.finish({ result: 'win', kills: state.kills, hp: state.tank ? state.tank.hp : 0 });
     Sfx.play('win');
     return;
@@ -525,6 +540,7 @@ function checkPlayerDown() {
   state.mode = 'over';
   state.shake = 9;
   Telemetry.log('death', { kills: state.kills });
+  Sfx.stopMusic();
   Sfx.play('boom');
   Telemetry.finish({ result: 'over', kills: state.kills, timeLeft: Math.round(state.timeLeft) });
   Sfx.play('over');

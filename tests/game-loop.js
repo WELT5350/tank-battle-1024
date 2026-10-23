@@ -69,7 +69,7 @@ const source = [
   read('js/game.js'),
   // 把内部符号导出来给测试用
   'globalThis.__game = { state, input, startGame, update, draw, spawnWave, spawnPot, Telemetry,' +
-  '  PlayerTank, DemandEnemy, MeetingEnemy, PotEnemy, CallBoss, Item, Bullet };',
+  '  PlayerTank, DemandEnemy, MeetingEnemy, PotEnemy, CallBoss, Item, Bullet, Sfx };',
 ].join('\n');
 
 try {
@@ -224,6 +224,30 @@ step(2);
 assert('结束时写入 window.__lastRound', !!(sandbox.window.__lastRound),
   '结果=' + JSON.stringify((sandbox.window.__lastRound || {}).result));
 assert('导出数据含 result', (sandbox.window.__lastRound || {}).result === 'over');
+
+// 11b. 无声环境下的音频接口：可以调用，不会崩
+G.startGame();
+let audioError = null;
+try {
+  G.Sfx.play('shoot');
+  G.Sfx.startMusic();
+  G.Sfx.stopMusic();
+} catch (e) {
+  audioError = e.message;
+}
+assert('没有 AudioContext 时音频调用不报错', audioError === null, audioError || '');
+
+const beforeMute = G.Sfx.isMuted();
+const nowOn = G.Sfx.toggle();          // toggle 返回「声音是否开着」
+assert('静音开关会翻转', G.Sfx.isMuted() === !beforeMute, `${beforeMute} → ${G.Sfx.isMuted()}`);
+assert('toggle 返回值与静音状态相反', nowOn === !G.Sfx.isMuted());
+
+assert('静音状态下播放不报错', (function () {
+  try { G.Sfx.play('ring'); G.Sfx.startMusic(); } catch (e) { return false; }
+  return true;
+})());
+G.Sfx.toggle();                        // 恢复成不静音
+assert('恢复后不再静音', G.Sfx.isMuted() === beforeMute);
 
 // 12. 正常游玩不会崩
 G.startGame();

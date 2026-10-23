@@ -4,6 +4,7 @@
 const Sfx = (() => {
   let audio = null;
   let master = null;
+  let musicBus = null;
   let silenced = false;
 
   function ensure() {
@@ -16,6 +17,10 @@ const Sfx = (() => {
       master = audio.createGain();
       master.gain.value = 0.22;
       master.connect(audio.destination);
+
+      musicBus = audio.createGain();
+      musicBus.gain.value = 0.34;
+      musicBus.connect(master);
     } catch (e) {
       return null;
     }
@@ -119,7 +124,92 @@ const Sfx = (() => {
     },
   };
 
+  // ---------- 背景音乐：一段 8 秒的循环 ----------
+  const BPM = 92;
+  const STEP = 60 / BPM / 2;          // 八分音符
+  const LOOP_STEPS = 32;              // 四个和弦 × 8 步
+  const CHORDS = [
+    [57, 60, 64],   // Am
+    [53, 57, 60],   // F
+    [48, 52, 55],   // C
+    [55, 59, 62],   // G
+  ];
+
+  let musicTimer = null;
+  let musicStep = 0;
+  let musicNext = 0;
+
+  function midiToFreq(m) {
+    return 440 * Math.pow(2, (m - 69) / 12);
+  }
+
+  function musicNote(freq, when, dur, gain, type) {
+    const c = audio;
+    if (!c) return;
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = type || 'triangle';
+    osc.frequency.setValueAtTime(freq, when);
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.linearRampToValueAtTime(gain, when + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    osc.connect(g);
+    g.connect(musicBus);
+    osc.start(when);
+    osc.stop(when + dur + 0.02);
+  }
+
+  function scheduleStep(i, when) {
+    const chordIndex = Math.floor(i / 8) % CHORDS.length;
+    const chord = CHORDS[chordIndex];
+    const inChord = i % 8;
+
+    // 低音：每小节头尾各一次
+    if (inChord === 0 || inChord === 4) {
+      musicNote(midiToFreq(chord[0] - 12), when, STEP * 1.8, 0.16, 'sine');
+    }
+    // 琶音：弱起，留空拍，避免太吵
+    if (inChord !== 3 && inChord !== 7) {
+      const note = chord[inChord % chord.length] + 12;
+      musicNote(midiToFreq(note), when, STEP * 1.2, 0.055, 'triangle');
+    }
+  }
+
+  function musicTick() {
+    const c = audio;
+    if (!c || !musicBus) return;
+    if (c.state === 'suspended') c.resume();
+    const horizon = c.currentTime + 0.18;
+    while (musicNext < horizon) {
+      if (musicNext < c.currentTime) musicNext = c.currentTime;
+      scheduleStep(musicStep, musicNext);
+      musicStep = (musicStep + 1) % LOOP_STEPS;
+      musicNext += STEP;
+    }
+  }
+
   return {
+    // ---------- 背景音乐 ----------
+    startMusic() {
+      if (silenced) return;
+      const c = ensure();
+      if (!c || musicTimer) return;
+      if (c.state === 'suspended') c.resume();
+      musicNext = c.currentTime + 0.1;
+      musicStep = 0;
+      musicTick();
+      musicTimer = setInterval(musicTick, 40);
+    },
+    stopMusic() {
+      if (musicTimer) {
+        clearInterval(musicTimer);
+        musicTimer = null;
+      }
+    },
+    isMusicPlaying() {
+      return !!musicTimer;
+    },
+
     play(name) {
       if (silenced) return;
       const fn = bank[name];
@@ -127,6 +217,9 @@ const Sfx = (() => {
     },
     toggle() {
       silenced = !silenced;
+      if (silenced) {
+        if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+      }
       return !silenced;
     },
     isMuted() {
