@@ -98,16 +98,16 @@ const Sfx = (() => {
       tone({ freq: 110, to: 26, dur: 0.55, type: 'sine', gain: 0.95 });
       tone({ freq: 70, to: 22, dur: 0.75, type: 'triangle', gain: 0.6, delay: 0.03 });
     },
-    // 老式电话的丁零零：两组快速颤音
+    // 老式电话的丁零零：两组颤音，频率压低、时长加长，笔记本喇叭才听得见
     ring: () => {
       for (let burst = 0; burst < 2; burst++) {
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 7; i++) {
           tone({
-            freq: i % 2 ? 1380 : 1760,
-            dur: 0.045,
-            type: 'sine',
-            gain: burst ? 0.26 : 0.32,
-            delay: burst * 0.5 + i * 0.048,
+            freq: i % 2 ? 1180 : 1520,
+            dur: 0.075,
+            type: 'triangle',
+            gain: burst ? 0.55 : 0.7,
+            delay: burst * 0.62 + i * 0.075,
           });
         }
       }

@@ -10,7 +10,7 @@ const MERGE_RADIUS = 50;       // 这几只之间的距离上限，太远不算�
 const FLY_RAM_DAMAGE = 3;      // 飞行撞击伤害
 const RAM_COOLDOWN_FRAMES = 18; // 两次撞击间隔，防止贴脸连续判定
 const POT_INTERVAL_FRAMES = 900; // 锅固定 15 秒飞进来一个
-const RING_INTERVAL_FRAMES = 105; // 电话还活着时，多久响一次
+const RING_INTERVAL_FRAMES = 90;  // 电话还活着时，多久响一次
 
 const state = {
   mode: 'ready',      // ready | playing | over | win
@@ -412,7 +412,7 @@ function dropLoot() {
 
     if (e.kind === 'boss') {
       state.items.push(new Item(e.x, e.y, 'leave'));   // 夺命连环 call 必掉年假
-    } else if (e.kind === 'meeting' && Math.random() < 0.38) {
+    } else if (e.kind === 'meeting' && Math.random() < 0.22) {
       state.items.push(new Item(e.x, e.y, Math.random() < 0.65 ? 'coffee' : 'fish'));
     }
     // 地面的未读和锅不掉落
