@@ -131,7 +131,7 @@ class PlayerTank {
     if (this.invincible > 0 && !this.flying && Math.floor(Date.now() / 90) % 2 === 0) return;
 
     const w = this.w, h = this.h;
-    const bodyColor = this.hurtFlash > 0 ? '#e3b7ae' : '#d5d0c2';
+    const bodyColor = this.hurtFlash > 0 ? '#e3b7ae' : '#c6c0ae';
 
     ctx.save();
     ctx.translate(this.x, this.y);
@@ -140,34 +140,34 @@ class PlayerTank {
     ctx.lineJoin = 'round';
 
     ctx.save();
-    // 履带：跟车身高矮相当，才像坦克
+    // 履带：宽大底座
     ctx.fillStyle = '#3a3a3a';
-    ctx.fillRect(-w / 2 + 1, h * 0.04, w - 2, h * 0.40);
+    ctx.fillRect(-w / 2, h * 0.04, w, h * 0.52);
 
     ctx.fillStyle = bodyColor;
-    sketchRect(ctx, -w / 2, -h * 0.44, w, h * 0.46, 1.6);
+    sketchRect(ctx, -w * 0.30, -h * 0.40, w * 0.60, h * 0.44, 1.6);
     ctx.restore();
 
     // 炮管：朝鼠标，不受翻滚影响
     ctx.save();
     ctx.translate(0, -h * 0.20);
     ctx.rotate(this.aimAngle);
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 4.4;
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.lineTo(30, 0);
+    ctx.lineTo(28, 0);
     ctx.stroke();
     ctx.restore();
 
     // 炮塔
-    ctx.fillStyle = '#c9c4b4';
-    wobblyCircle(ctx, 0, -h * 0.20, 8, 9, 1.2);
+    ctx.fillStyle = '#b3ad9b';
+    wobblyCircle(ctx, 0, -h * 0.20, 6.2, 9, 1.0);
     ctx.fill(); ctx.stroke();
 
     // 眼睛
     ctx.fillStyle = '#1c1c1c';
     ctx.beginPath();
-    ctx.arc(4, -h * 0.20, 1.8, 0, Math.PI * 2);
+    ctx.arc(3.2, -h * 0.20, 1.5, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();

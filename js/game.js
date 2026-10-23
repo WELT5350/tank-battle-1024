@@ -59,7 +59,7 @@ function shoot() {
   if (state.frame - (t.lastShotFrame || 0) < 3) return;
   t.lastShotFrame = state.frame;
   state.bullets.push(t.fire());
-  state.shake = Math.max(state.shake, 0.5);
+  addShake(0.5);
   spawnDust(t.x, t.y - 6, '#8a8a8a', 2);
 }
 
@@ -97,7 +97,7 @@ window.addEventListener('keydown', (e) => {
       // 双击空格：5 血及以下进入旋转起飞
       if (t.canFly() && t.startFlight()) {
         state.message = '画饼升天！10 秒无敌';
-        state.shake = Math.max(state.shake, 2.4);
+        addShake(2.4);
       } else if (!t.flying && t.hp > 5) {
         state.message = '血量高于 5，飞不起来';
       }
@@ -115,6 +115,22 @@ window.addEventListener('keyup', (e) => {
   if (k === 'w') input.up = false;
   if (k === 's') input.down = false;
 });
+
+// ---------- 抖动 ----------
+// 满血完全不抖；血量越低，事件抖动才越明显
+function shakeFactor() {
+  const t = state.tank;
+  if (!t || state.mode !== 'playing') return 0;
+  if (t.hp >= 10) return 0;
+  if (t.hp >= 7) return 0.35;
+  if (t.hp >= 4) return 0.7;
+  return 1;
+}
+
+function addShake(amount) {
+  const v = amount * shakeFactor();
+  if (v > state.shake) state.shake = v;
+}
 
 // ---------- 粒子 ----------
 function spawnDust(x, y, color = '#888', n = 6) {
@@ -197,7 +213,7 @@ function update() {
       if (t.autoFire <= 0) {
         t.autoFire = 4;
         state.bullets.push(t.fire());
-        state.shake = Math.max(state.shake, 0.6);
+        addShake(0.6);
       }
 
       for (const e of state.enemies) {
@@ -205,7 +221,7 @@ function update() {
         if (hitCircle(t, 24, e, e.r + 6)) {
           e.dead = true;
           state.kills++;
-          state.shake = Math.max(state.shake, 1.4);
+          addShake(1.4);
           spawnDust(e.x, e.y, '#8a6a5a', 12);
         }
       }
@@ -221,7 +237,7 @@ function update() {
         if (hitCircle(b, b.r, e, e.r)) {
           e.dead = true; b.dead = true; state.kills++;
           spawnDust(e.x, e.y, '#8a6a5a', 10);
-          state.shake = Math.max(state.shake, 1.2);
+          addShake(1.2);
           if (Math.random() < 0.22) {
             state.items.push(new Item(e.x, e.y, Math.random() < 0.65 ? 'coffee' : 'fish'));
           }
@@ -232,7 +248,7 @@ function update() {
       if (hitCircle(b, b.r, t, 22)) {
         b.dead = true;
         t.damage(1);
-        state.shake = Math.max(state.shake, 2.0);
+        addShake(2.0);
         spawnDust(t.x, t.y, '#b5736a', 8);
       }
     }
@@ -245,7 +261,7 @@ function update() {
     else if (e.kind === 'meeting' && t) e.update(t, (b) => newBullets.push(b));
     else if (e.kind === 'pot' && t) e.update(t);
     if (e.kind === 'demand' && e.dead && t) {
-      state.shake = Math.max(state.shake, 2.4);
+      addShake(2.4);
       spawnDust(e.x, e.y, '#b5736a', 10);
     }
   }

@@ -37,11 +37,11 @@ function sketchStroke(ctx, x, y, w, h, amp = 1.8) {
   wobblyLine(ctx, x, y + h, x, y, 3, amp);
 }
 
-// 潦草矩形：闭合路径用于填充，再叠四段描边保住手绘缺口
+// 潦草矩形：填充与描边共用同一条抖过的闭合路径，保证边缘不打架
 function sketchRect(ctx, x, y, w, h, amp = 1.8) {
   wobblyRect(ctx, x, y, w, h, amp);
   ctx.fill();
-  sketchStroke(ctx, x, y, w, h, amp);
+  ctx.stroke();
 }
 
 // 潦草矩形：构建单条闭合路径，供 fill 使用
