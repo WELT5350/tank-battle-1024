@@ -13,15 +13,43 @@ class Bullet {
     this.dead = false;
     this.life = 180;
     this.r = 4;
+    this.homing = false;     // 追踪弹
+    this.target = null;
+    this.turn = 0.052;       // 每帧最大转向
   }
   update() {
+    if (this.homing && this.target) {
+      const want = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+      const cur = Math.atan2(this.vy, this.vx);
+      let diff = want - cur;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      const next = cur + clamp(diff, -this.turn, this.turn);
+      const sp = Math.hypot(this.vx, this.vy) || 3.2;
+      this.vx = Math.cos(next) * sp;
+      this.vy = Math.sin(next) * sp;
+    }
     this.x += this.vx;
     this.y += this.vy;
-    this.vy += this.owner === 'enemy' ? 0.12 : 0.02;
+    if (!this.homing) this.vy += this.owner === 'enemy' ? 0.12 : 0.02;
     this.life--;
     if (this.life <= 0 || this.x < -40 || this.x > W + 40 || this.y > GROUND) this.dead = true;
   }
   draw(ctx) {
+    if (this.homing) {
+      ctx.save();
+      ctx.strokeStyle = '#b5523b';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r + 2.4 + jitter(0.6), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#8a3f30';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r - 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
     scratchFill(ctx, this.owner === 'player' ? '#222' : '#b5523b');
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.r + jitter(0.8), 0, Math.PI * 2);
@@ -242,7 +270,10 @@ class MeetingEnemy extends Enemy {
     this.timer--;
     if (this.timer <= 0) {
       this.timer = rand(95, 165);
-      spawnBullet(new Bullet(this.x, this.y + this.r, rand(-1.2, 1.2), 3.4, 'enemy'));
+      const b = new Bullet(this.x, this.y + this.r, 0, 3.1, 'enemy');
+      b.homing = true;
+      b.target = player;
+      spawnBullet(b);
     }
   }
   draw(ctx) {

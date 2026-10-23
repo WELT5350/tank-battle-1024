@@ -270,6 +270,21 @@ function update() {
       }
     }
   }
+  // 双方子弹对撞抵消
+  for (const pb of state.bullets) {
+    if (pb.dead || pb.owner !== 'player') continue;
+    for (const eb of state.bullets) {
+      if (eb.dead || eb.owner !== 'enemy') continue;
+      if (hitCircle(pb, pb.r + 2, eb, eb.r + 2)) {
+        pb.dead = true;
+        eb.dead = true;
+        spawnDust((pb.x + eb.x) / 2, (pb.y + eb.y) / 2, '#8a6a5a', 7);
+        addShake(0.8);
+        break;
+      }
+    }
+  }
+
   state.bullets = state.bullets.filter((b) => !b.dead);
 
   const newBullets = [];
