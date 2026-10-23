@@ -81,6 +81,8 @@ class PlayerTank {
     this.flying = false;
     this.flyTimer = 0;
     this.ramCd = 0;
+    this.laserTimer = 0; // 咖啡：剩余激光时间
+    this.damageBlink = 0; // 挨打后闪几帧
   }
 
   update(input) {
@@ -124,6 +126,7 @@ class PlayerTank {
     }
 
     if (this.invincible > 0 && !this.flying) this.invincible--;
+    if (this.damageBlink > 0) this.damageBlink--;
   }
 
   jump() {
@@ -155,6 +158,8 @@ class PlayerTank {
     this.flying = false;
     this.flyTimer = 0;
     this.ramCd = 0;
+    this.laserTimer = 0; // 咖啡：剩余激光时间
+    this.damageBlink = 0; // 挨打后闪几帧
     this.invincible = 0;
     this.hp = Math.min(this.maxHp, this.hp + (1 + Math.floor(Math.random() * 3)));
   }
@@ -180,7 +185,8 @@ class PlayerTank {
   }
 
   draw(ctx) {
-    if (this.invincible > 0 && !this.flying && Math.floor(Date.now() / 90) % 2 === 0) return;
+    // 挨打后短暂闪烁，替代原来的无敌闪烁
+    if (this.damageBlink > 0 && Math.floor(this.damageBlink / 3) % 2 === 0) return;
 
     const w = this.w,
       h = this.h;
