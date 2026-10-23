@@ -33,13 +33,13 @@ class PlayerTank {
   constructor(x, y) {
     this.x = x; this.y = y;
     this.vx = 0; this.vy = 0;
-    this.w = 58; this.h = 34;
+    this.w = 46; this.h = 26;
     this.turretAngle = -Math.PI / 2;
     this.turretSpin = 0;
     this.onGround = true;
     this.jumpsLeft = 2;
-    this.hp = 100;
-    this.maxHp = 100;
+    this.hp = 10;
+    this.maxHp = 10;
     this.invincible = 0;
     this.cooldown = 0;
     this.spinDir = 0;
@@ -131,69 +131,44 @@ class PlayerTank {
     if (this.invincible > 0 && Math.floor(Date.now() / 90) % 2 === 0) return;
 
     const w = this.w, h = this.h;
-    const bodyColor = this.hurtFlash > 0 ? '#c0392b' : '#48688f';
-    const tilt = clamp(this.vx * 0.012, -0.10, 0.10);
+    const bodyColor = this.hurtFlash > 0 ? '#e3b7ae' : '#d5d0c2';
 
     ctx.save();
     ctx.translate(this.x, this.y);
-    ctx.rotate(tilt);
-    ctx.lineWidth = 2.6;
+    ctx.lineWidth = 2.4;
     ctx.strokeStyle = '#1c1c1c';
     ctx.lineJoin = 'round';
 
-    // 履带底座
-    ctx.fillStyle = '#2b2b2b';
-    wobblyRect(ctx, -w / 2, h * 0.06, w, h * 0.42, 1.5);
-    ctx.fill(); ctx.stroke();
-    // 履带齿
-    ctx.fillStyle = '#6a6a6a';
-    for (let i = 0; i < 6; i++) {
-      const tx = -w / 2 + 6 + i * ((w - 12) / 5);
-      ctx.fillRect(tx - 2.5, h * 0.10, 5, h * 0.10);
-      ctx.fillRect(tx - 2.5, h * 0.30, 5, h * 0.10);
-    }
+    // 履带：一条深色横条
+    ctx.fillStyle = '#3a3a3a';
+    ctx.fillRect(-w / 2 + 2, h * 0.10, w - 4, h * 0.26);
 
     // 车身
     ctx.fillStyle = bodyColor;
-    wobblyRect(ctx, -w / 2 + 4, -h * 0.42, w - 8, h * 0.56, 1.8);
+    wobblyRect(ctx, -w / 2, -h * 0.34, w, h * 0.48, 1.6);
     ctx.fill(); ctx.stroke();
 
-    // 车身高光
-    ctx.strokeStyle = 'rgba(255,255,255,.45)';
-    ctx.lineWidth = 2;
-    wobblyLine(ctx, -w / 2 + 9, -h * 0.30, w / 2 - 12, -h * 0.34, 3, 1.0);
-
-    // 炮管：绕炮塔旋转的粗矩形
+    // 炮管：一根线
     ctx.save();
-    ctx.translate(0, -h * 0.22);
+    ctx.translate(0, -h * 0.20);
     ctx.rotate(this.turretAngle);
-    ctx.strokeStyle = '#141414';
-    ctx.lineWidth = 2.2;
-    ctx.fillStyle = '#22354d';
+    ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.rect(6, -5, 34, 10);
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#0d0d0d';
-    ctx.beginPath();
-    ctx.rect(38, -4, 4, 8);
-    ctx.fill();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(30, 0);
+    ctx.stroke();
     ctx.restore();
 
-    // 炮塔
-    ctx.strokeStyle = '#1c1c1c';
-    ctx.lineWidth = 2.4;
-    ctx.fillStyle = '#3b557a';
-    wobblyCircle(ctx, 0, -h * 0.22, 11, 10, 1.3);
+    // 炮塔：一个圆
+    ctx.fillStyle = '#c9c4b4';
+    wobblyCircle(ctx, 0, -h * 0.20, 8, 9, 1.2);
     ctx.fill(); ctx.stroke();
 
-    // 打工人疲惫的眼睛
-    ctx.fillStyle = '#f3f2ec';
-    ctx.beginPath(); ctx.ellipse(6, -h * 0.22 - 1, 4.2, 3.4, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#111';
-    ctx.beginPath(); ctx.arc(7.4, -h * 0.22 - 1, 1.7, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#1c1c1c';
-    ctx.lineWidth = 1.4;
-    ctx.beginPath(); ctx.moveTo(2, -h * 0.22 + 4); ctx.lineTo(10, -h * 0.22 + 4.6); ctx.stroke();
+    // 眼睛：一个点
+    ctx.fillStyle = '#1c1c1c';
+    ctx.beginPath();
+    ctx.arc(4, -h * 0.20, 1.8, 0, Math.PI * 2);
+    ctx.fill();
 
     ctx.restore();
   }
@@ -208,6 +183,7 @@ class Enemy {
     this.r = 16;
     this.hp = 1;
     this.age = 0;
+    this.labelOff = rand(-9, 9);
     this.label = { demand: '临时需求', meeting: '周会通知', pot: '隔壁的锅' }[kind];
   }
 }
@@ -227,7 +203,7 @@ class DemandEnemy extends Enemy {
     this.x += this.vx;
     this.y = GROUND - this.r + Math.sin(this.age * 0.2) * 2;
     if (hitCircle(this, this.r, player, 22)) {
-      player.damage(10);
+      player.damage(1);
       this.dead = true;
     }
     if (this.x < -40 || this.x > W + 40) this.dead = true;
@@ -235,7 +211,7 @@ class DemandEnemy extends Enemy {
   draw(ctx) {
     ctx.save();
     ctx.lineWidth = 2.2; ctx.strokeStyle = '#1c1c1c';
-    scratchFill(ctx, '#b5523b');
+    scratchFill(ctx, '#f0ece0');
     wobblyRect(ctx, this.x - this.r, this.y - this.r * 0.7, this.r * 2, this.r * 1.4, 2);
     ctx.fill(); ctx.stroke();
     // 狂躁的眼睛
@@ -245,7 +221,7 @@ class DemandEnemy extends Enemy {
     ctx.fillStyle = '#111';
     ctx.beginPath(); ctx.arc(this.x - 5, this.y - 2, 1.4, 0, 7); ctx.fill();
     ctx.beginPath(); ctx.arc(this.x + 5, this.y - 2, 1.4, 0, 7); ctx.fill();
-    handText(ctx, '！', this.x, this.y - this.r - 10, 15, '#b5523b', 'center');
+    handText(ctx, '未读', this.x + this.labelOff, this.y - this.r - 9, 11, '#8a6a5a', 'center');
     ctx.restore();
   }
 }
@@ -273,7 +249,7 @@ class MeetingEnemy extends Enemy {
   draw(ctx) {
     ctx.save();
     ctx.lineWidth = 2.2; ctx.strokeStyle = '#1c1c1c';
-    scratchFill(ctx, '#6b6b8a');
+    scratchFill(ctx, '#f0ece0');
     wobblyCircle(ctx, this.x, this.y, this.r, 9, 2);
     ctx.fill(); ctx.stroke();
     // 时钟指针
@@ -304,17 +280,17 @@ class PotEnemy extends Enemy {
     }
     if (this.y > GROUND - this.r) {
       this.dead = true;
-      if (Math.abs(this.x - player.x) < 60) player.damage(10);
+      if (Math.abs(this.x - player.x) < 60) player.damage(1);
     }
     if (this.x < -60 || this.x > W + 60) this.dead = true;
   }
   draw(ctx) {
     ctx.save();
     ctx.lineWidth = 2.2; ctx.strokeStyle = '#1c1c1c';
-    scratchFill(ctx, '#3a3a3a');
+    scratchFill(ctx, '#f0ece0');
     wobblyCircle(ctx, this.x, this.y, this.r, 8, 2);
     ctx.fill(); ctx.stroke();
-    handText(ctx, '锅', this.x, this.y + 1, 13, '#f3f2ec', 'center');
+    handText(ctx, '锅', this.x, this.y + 1, 13, '#333', 'center');
     ctx.restore();
   }
 }
@@ -339,10 +315,10 @@ class Item {
   draw(ctx) {
     ctx.save();
     ctx.lineWidth = 2; ctx.strokeStyle = '#1c1c1c';
-    scratchFill(ctx, this.kind === 'coffee' ? '#8a5a2b' : '#4b8a5a');
+    scratchFill(ctx, this.kind === 'coffee' ? '#e6d3b8' : '#cfe0c8');
     wobblyRect(ctx, this.x - this.r, this.y - this.r * 0.8, this.r * 2, this.r * 1.6, 1.8);
     ctx.fill(); ctx.stroke();
-    handText(ctx, this.kind === 'coffee' ? '咖' : '摸', this.x, this.y, 13, '#f3f2ec', 'center');
+    handText(ctx, this.kind === 'coffee' ? '咖' : '摸', this.x, this.y, 13, '#333', 'center');
     ctx.restore();
   }
 }

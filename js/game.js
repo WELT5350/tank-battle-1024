@@ -154,7 +154,7 @@ function update() {
     } else if (state.tank) {
       if (hitCircle(b, b.r, state.tank, 22)) {
         b.dead = true;
-        state.tank.damage(8);
+        state.tank.damage(1);
         state.shake = Math.max(state.shake, 5);
         spawnDust(state.tank.x, state.tank.y, '#c0392b', 8);
       }
@@ -183,7 +183,7 @@ function update() {
     if (hitCircle(it, it.r, state.tank, 24)) {
       it.dead = true;
       if (it.kind === 'coffee') {
-        state.tank.hp = Math.min(state.tank.maxHp, state.tank.hp + 25);
+        state.tank.hp = Math.min(state.tank.maxHp, state.tank.hp + 3);
         state.message = '续命一口';
       } else {
         state.tank.invincible = 180;
@@ -232,10 +232,10 @@ function drawBackground() {
 
   // 墙上的便利贴（潦草职场标语）
   const notes = [
-    { x: 120, y: 150, txt: '本周必达', color: '#ffe27a' },
-    { x: 340, y: 128, txt: '再改一版', color: '#a8d8ea' },
-    { x: 650, y: 140, txt: '辛苦了', color: '#ffb3ba' },
-    { x: 830, y: 210, txt: '对齐一下', color: '#c8e6a0' },
+    { x: 120, y: 150, txt: '本周必达', color: '#f2e6b0' },
+    { x: 340, y: 128, txt: '再改一版', color: '#cfe0e4' },
+    { x: 650, y: 140, txt: '辛苦了', color: '#f0d2d2' },
+    { x: 830, y: 210, txt: '对齐一下', color: '#d8e4c6' },
   ];
   for (const n of notes) {
     ctx.save();
@@ -252,37 +252,26 @@ function drawBackground() {
 }
 
 function drawHUD() {
-  // 精神状态血条
-  const barW = 260, barH = 18, bx = 24, by = 20;
+  const bx = 24, by = 26;
   ctx.save();
-  ctx.strokeStyle = '#1c1c1c'; ctx.lineWidth = 2.4;
-  wobblyRect(ctx, bx, by, barW, barH, 1.8);
-  ctx.stroke();
 
-  if (state.tank) {
-    const ratio = state.tank.hp / state.tank.maxHp;
-    ctx.fillStyle = ratio > 0.5 ? '#4b8a5a' : ratio > 0.25 ? '#d08c2a' : '#c0392b';
-    ctx.fillRect(bx + 2, by + 2, (barW - 4) * ratio, barH - 4);
-  }
-  handText(ctx, '精神状态', bx, by + barH + 16, 14, '#333');
+  const hp = state.tank ? state.tank.hp : 10;
+  const hpColor = hp <= 3 ? '#b5736a' : hp <= 6 ? '#c9a86a' : '#3a3a3a';
+  handText(ctx, '精神状态', bx, by, 15, '#444');
+  handText(ctx, String(hp), bx + 76, by - 2, 34, hpColor);
 
-  // 倒计时
   const secs = Math.ceil(state.timeLeft);
-  handText(ctx, `还有 ${secs} 秒下班`, W - 24, by + 8, 20, '#222', 'right');
+  handText(ctx, `还有 ${secs} 秒下班`, W - 24, by - 4, 20, '#222', 'right');
+  handText(ctx, `干掉了 ${state.kills} 个`, W - 24, by + 22, 15, '#666', 'right');
 
-  // 击杀
-  handText(ctx, `干掉了 ${state.kills} 个`, W - 24, by + 36, 15, '#666', 'right');
+  if (state.message) handText(ctx, state.message, W / 2, 40, 18, '#6d8a6d', 'center');
 
-  // 提示
-  if (state.message) handText(ctx, state.message, W / 2, 40, 18, '#4b8a5a', 'center');
-
-  // 升力指示（炮管转速）
   if (state.tank) {
     const spin = Math.abs(state.tank.turretSpin) / MAX_SPIN;
     if (spin > 0.05) {
-      ctx.fillStyle = 'rgba(72,104,143,0.5)';
-      ctx.fillRect(W / 2 - 60, H - 18, 120 * spin, 6);
-      handText(ctx, spin > 0.6 ? '起飞！' : '转起来', W / 2, H - 30, 13, '#48688f', 'center');
+      ctx.fillStyle = 'rgba(90,90,90,0.35)';
+      ctx.fillRect(W / 2 - 60, H - 16, 120 * spin, 5);
+      handText(ctx, spin > 0.6 ? '起飞！' : '转起来', W / 2, H - 28, 13, '#555', 'center');
     }
   }
   ctx.restore();
