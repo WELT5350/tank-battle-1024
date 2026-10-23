@@ -8,7 +8,7 @@ const FLY_FRAMES = 600;         // 画饼升天持续帧数（10 秒 @60fps）
 const JUMP_VELOCITY = -14.6;
 const BULLET_SPEED = 12.5;
 const POT_DAMAGE = 2;                                  // 锅碰到扣的血
-const POT_BOUNCE_SPEEDS = [3.9, 2.9, 2.1];             // 每次弹起的初速，逐次递减
+const POT_BOUNCE_SPEEDS = [5.4, 4.1, 3.0];             // 每次弹起的初速，逐次递减
 
 class Bullet {
   constructor(x, y, vx, vy, owner) {
