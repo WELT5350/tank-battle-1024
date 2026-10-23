@@ -119,14 +119,22 @@ const harness = `
   T('弹跳高于 4px', (GROUND - pot.r) - minAfterLand > 4,
     '弹起 ' + Math.round((GROUND - pot.r) - minAfterLand) + 'px');
 
-  // 13. 静置的锅不伤人
+  // 13. 踩到落定的锅：扣 1 血，锅碎掉
   const tank6 = new PlayerTank(480, GROUND - 13);
   tank6.hp = MAX_HP;
   const restingPot = new PotEnemy(480, GROUND - 19, 0, 0);
   restingPot.settled = true;
   restingPot.bounced = true;
   restingPot.update(tank6);
-  T('静置的锅不扣血', tank6.hp === MAX_HP, 'hp=' + tank6.hp);
+  T('踩到落定的锅扣 1 血', tank6.hp === MAX_HP - 1, 'hp=' + tank6.hp);
+  T('踩过之后锅碎掉', restingPot.dead === true);
+
+  // 13b. 落定的锅放着不动会自己消失
+  const idlePot = new PotEnemy(700, GROUND - 19, 0, 0);
+  idlePot.settled = true;
+  idlePot.restLife = 420;
+  idlePot.update({ x: -9999, y: 0 });
+  T('锅静置超时消失', idlePot.dead === true);
 
   // 14. 道具半径
   T('年假道具更大', new Item(0, 0, 'leave').r > new Item(0, 0, 'coffee').r);

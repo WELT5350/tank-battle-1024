@@ -312,9 +312,14 @@ class PotEnemy extends Enemy {
   update(player) {
     this.age++;
 
-    // 已经落定的锅：静静躺一会儿再消失
+    // 已经落定的锅：谁踩上去就烫一下，锅也碎了
     if (this.settled) {
       this.restLife++;
+      if (hitCircle(this, this.r, player, 22)) {
+        player.damage(1);
+        this.dead = true;
+        return;
+      }
       if (this.restLife > 420) this.dead = true;
       return;
     }
