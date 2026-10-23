@@ -383,7 +383,7 @@ class Item {
   constructor(x, y, kind) {
     this.x = x; this.y = y;
     this.kind = kind; // 'coffee' | 'fish'
-    this.r = 13;
+    this.r = kind === 'leave' ? 17 : 13;
     this.dead = false;
     this.age = 0;
     this.vy = -2;
@@ -398,9 +398,10 @@ class Item {
   draw(ctx) {
     ctx.save();
     ctx.lineWidth = 2; ctx.strokeStyle = '#1c1c1c';
-    scratchFill(ctx, this.kind === 'coffee' ? '#e6d3b8' : '#cfe0c8');
+    scratchFill(ctx, this.kind === 'coffee' ? '#e6d3b8' : this.kind === 'fish' ? '#cfe0c8' : '#dfe8f0');
     sketchRect(ctx, this.x - this.r, this.y - this.r * 0.8, this.r * 2, this.r * 1.6, 1.8);
-    handText(ctx, this.kind === 'coffee' ? '咖' : '摸', this.x, this.y, 13, '#333', 'center');
+    const tag = this.kind === 'coffee' ? '咖' : this.kind === 'fish' ? '摸' : '假';
+    handText(ctx, tag, this.x, this.y, 13, '#333', 'center');
     ctx.restore();
   }
 }

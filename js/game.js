@@ -20,6 +20,7 @@ const state = {
   message: '',
   mouse: { x: 480, y: 300, down: false },
   lastSpaceAt: 0,
+  timeStop: 0,
 };
 
 const input = { left: false, right: false, up: false, down: false };
@@ -160,6 +161,7 @@ function startGame() {
   state.spawnTimer = 95;
   state.message = '';
   state.lastSpaceAt = 0;
+  state.timeStop = 0;
   state.tank = new PlayerTank(W / 2, GROUND - 30);
 }
 
@@ -189,7 +191,13 @@ function update() {
   if (state.mode === 'paused') return;
   state.frame++;
 
-  if (state.mode === 'playing') {
+  const frozen = state.timeStop > 0;
+  if (frozen) {
+    state.timeStop--;
+    if (state.timeStop === 0) state.message = '年假用完，继续上班';
+  }
+
+  if (state.mode === 'playing' && !frozen) {
     state.timeLeft -= 1 / 60;
     if (state.timeLeft <= 0) { state.timeLeft = 0; state.mode = 'win'; }
     state.spawnTimer--;
@@ -228,7 +236,7 @@ function update() {
     }
   }
 
-  for (const b of state.bullets) b.update();
+  for (const b of state.bullets) { if (!(frozen && b.owner === 'enemy')) b.update(); }
   for (const b of state.bullets) {
     if (b.dead) continue;
     if (b.owner === 'player') {
@@ -265,7 +273,7 @@ function update() {
   state.bullets = state.bullets.filter((b) => !b.dead);
 
   const newBullets = [];
-  for (const e of state.enemies) {
+  if (!frozen) for (const e of state.enemies) {
     if (e.kind === 'demand' && t) e.update(t);
     else if (e.kind === 'meeting' && t) e.update(t, (b) => newBullets.push(b));
     else if (e.kind === 'pot' && t) e.update(t);
@@ -276,15 +284,21 @@ function update() {
     }
   }
   state.bullets.push(...newBullets);
+  for (const e of state.enemies) {
+    if (e.dead && e.kind === 'boss' && !e.dropDone) {
+      e.dropDone = true;
+      state.items.push(new Item(e.x, e.y, 'leave'));
+    }
+  }
   state.enemies = state.enemies.filter((e) => !e.dead);
 
   // 未读攒够了就合体成夺命连环 call
   const unread = state.enemies.filter((e) => e.kind === 'demand');
-  if (unread.length >= 3) {
-    const three = unread.slice(0, 3);
-    const cx = three.reduce((a, e) => a + e.x, 0) / 3;
-    const cy = three.reduce((a, e) => a + e.y, 0) / 3;
-    for (const e of three) e.dead = true;
+  if (unread.length >= 6) {
+    const six = unread.slice(0, 6);
+    const cx = six.reduce((a, e) => a + e.x, 0) / 6;
+    const cy = six.reduce((a, e) => a + e.y, 0) / 6;
+    for (const e of six) e.dead = true;
     state.enemies = state.enemies.filter((e) => !e.dead);
     state.enemies.push(new CallBoss(clamp(cx, 60, W - 60), cy));
     state.message = '未读攒够了——夺命连环call！';
@@ -298,7 +312,8 @@ function update() {
     if (hitCircle(it, it.r, t, 24)) {
       it.dead = true;
       if (it.kind === 'coffee') { t.hp = Math.min(t.maxHp, t.hp + 3); state.message = '续命一口 +3'; }
-      else { t.invincible = Math.max(t.invincible, 180); state.message = '摸鱼 3 秒'; }
+      else if (it.kind === 'fish') { t.invincible = Math.max(t.invincible, 180); state.message = '摸鱼 3 秒'; }
+      else { state.timeStop = 600; state.message = '一天年假！时间停止 10 秒'; addShake(4); }
       spawnDust(it.x, it.y, '#7d9a7b', 8);
     }
   }
@@ -396,6 +411,16 @@ function drawHUD() {
   handText(ctx, `还有 ${secs} 秒下班`, W - 24, by + 2, 20, '#222', 'right');
   handText(ctx, `干掉了 ${state.kills} 个`, W - 24, by + 28, 15, '#666', 'right');
 
+  if (state.timeStop > 0) {
+    const fr = clamp(state.timeStop / 600, 0, 1);
+    ctx.strokeStyle = '#4a6a8a';
+    ctx.lineWidth = 2;
+    sketchStroke(ctx, W / 2 - 90, 66, 180, 8, 1.2);
+    ctx.fillStyle = '#9db8cc';
+    ctx.fillRect(W / 2 - 88, 68, 176 * fr, 4);
+    handText(ctx, '年假中 · 时间停止', W / 2, 88, 14, '#4a6a8a', 'center');
+  }
+
   if (state.message) handText(ctx, state.message, W / 2, 44, 18, '#6d8a6d', 'center');
 
   ctx.restore();
@@ -456,6 +481,18 @@ function draw() {
     ctx.beginPath(); ctx.arc(m.x, m.y, 7, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(m.x - 11, m.y); ctx.lineTo(m.x - 3, m.y); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(m.x + 3, m.y); ctx.lineTo(m.x + 11, m.y); ctx.stroke();
+    ctx.restore();
+  }
+
+  if (state.timeStop > 0) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(120,150,180,0.16)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(70,100,130,0.10)';
+    ctx.lineWidth = 1;
+    for (let y = (state.frame * 2) % 8; y < H; y += 8) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
     ctx.restore();
   }
 
