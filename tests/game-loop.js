@@ -249,6 +249,29 @@ assert('静音状态下播放不报错', (function () {
 G.Sfx.toggle();                        // 恢复成不静音
 assert('恢复后不再静音', G.Sfx.isMuted() === beforeMute);
 
+// 11c. 阵亡后世界要停住
+G.startGame();
+clearEnemies();
+state.tank.hp = 5;
+const still = new G.DemandEnemy(400, 539);
+still.speed = 2;
+state.enemies.push(still);
+const bossAfterDeath = new G.CallBoss(700, 528);
+state.enemies.push(bossAfterDeath);
+state.ringTimer = 5;
+state.tank.hp = 0;
+step(1);
+assert('阵亡后进入 over', state.mode === 'over', 'mode=' + state.mode);
+
+const posAtDeath = still.x;
+const ringAtDeath = state.ringTimer;
+step(5);
+assert('阵亡后敌人不再移动', Math.abs(still.x - posAtDeath) < 0.01,
+  `${posAtDeath.toFixed(1)} → ${still.x.toFixed(1)}`);
+assert('阵亡后电话不再响铃', state.ringTimer === ringAtDeath,
+  `${ringAtDeath} → ${state.ringTimer}`);
+assert('阵亡后不再刷新敌人', state.enemies.length === 2, '敌人=' + state.enemies.length);
+
 // 12. 正常游玩不会崩
 G.startGame();
 state.timeLeft = 90;

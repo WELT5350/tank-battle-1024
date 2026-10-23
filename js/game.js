@@ -245,6 +245,13 @@ function update() {
 
   const frozen = state.timeStop > 0;
   updateTimeStop(frozen);
+
+  // 一局结束后世界就停住：怪不再动、电话不再响、子弹不再飞
+  if (state.mode === 'over' || state.mode === 'win') {
+    updateEffects();
+    return;
+  }
+
   if (!frozen) updateRound();
   updateTank(frozen);
   updateBullets(frozen);
