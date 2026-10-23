@@ -73,9 +73,16 @@ const harness = `
   tank4.damage(5);
   T('飞行时无敌', tank4.hp === 3, 'hp=' + tank4.hp);
 
-  // 7. 起飞条件：血量必须 ≤5
+  // 7. 起飞条件：必须压到 3 血及以下
   const tank5 = new PlayerTank(480, GROUND - 13);
   T('满血不能起飞', tank5.startFlight() === false);
+
+  // 7b. 起飞门槛是 3 血
+  const tankFly3 = new PlayerTank(480, GROUND - 13);
+  tankFly3.hp = 4;
+  T('4 血不能起飞', tankFly3.startFlight() === false);
+  tankFly3.hp = 3;
+  T('3 血可以起飞', tankFly3.startFlight() === true);
 
   // 8. 小怪一枪死
   const unread = new DemandEnemy(300, GROUND - 15);

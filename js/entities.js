@@ -126,7 +126,7 @@ class PlayerTank {
     return false;
   }
 
-  canFly() { return !this.flying && this.hp <= 5; }
+  canFly() { return !this.flying && this.hp <= 3; }
 
   startFlight() {
     if (!this.canFly()) return false;
