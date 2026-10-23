@@ -5,7 +5,9 @@ const ctx = canvas.getContext('2d');
 
 const ROUND_SECONDS = 90;      // 一局时长
 const TIME_STOP_FRAMES = 600;  // 年假：时间停止 10 秒
-const MERGE_COUNT = 6;         // 几只未读合体
+const MERGE_COUNT = 3;         // 几只未读合体
+const FLY_RAM_DAMAGE = 3;      // 飞行撞击伤害
+const RAM_COOLDOWN_FRAMES = 18; // 两次撞击间隔，防止贴脸连续判定
 
 const state = {
   mode: 'ready',      // ready | playing | over | win
@@ -224,13 +226,16 @@ function update() {
         addShake(0.6);
       }
 
+      // 撞击按伤害算，且有冷却，否则贴着 boss 一帧就能把它撞没
+      if (t.ramCd > 0) t.ramCd--;
       for (const e of state.enemies) {
-        if (e.dead) continue;
+        if (e.dead || t.ramCd > 0) continue;
         if (hitCircle(t, 24, e, e.r + 6)) {
-          e.dead = true;
-          state.kills++;
+          e.hurt(FLY_RAM_DAMAGE);
+          t.ramCd = RAM_COOLDOWN_FRAMES;
           addShake(1.4);
           spawnDust(e.x, e.y, '#8a6a5a', 12);
+          if (e.dead) state.kills++;
         }
       }
     }
@@ -306,10 +311,10 @@ function update() {
   // 未读攒够了就合体成夺命连环 call
   const unread = state.enemies.filter((e) => e.kind === 'demand');
   if (unread.length >= MERGE_COUNT) {
-    const six = unread.slice(0, MERGE_COUNT);
-    const cx = six.reduce((a, e) => a + e.x, 0) / MERGE_COUNT;
-    const cy = six.reduce((a, e) => a + e.y, 0) / MERGE_COUNT;
-    for (const e of six) e.dead = true;
+    const picked = unread.slice(0, MERGE_COUNT);
+    const cx = picked.reduce((a, e) => a + e.x, 0) / MERGE_COUNT;
+    const cy = picked.reduce((a, e) => a + e.y, 0) / MERGE_COUNT;
+    for (const e of picked) e.dead = true;
     state.enemies = state.enemies.filter((e) => !e.dead);
     state.enemies.push(new CallBoss(clamp(cx, 60, W - 60), cy));
     state.message = '未读攒够了——夺命连环call！';

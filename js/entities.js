@@ -74,6 +74,7 @@ class PlayerTank {
     this.hurtFlash = 0;
     this.flying = false;
     this.flyTimer = 0;
+    this.ramCd = 0;
   }
 
   update(input) {
@@ -130,6 +131,7 @@ class PlayerTank {
   startFlight() {
     if (!this.canFly()) return false;
     this.flying = true;
+    this.ramCd = 0;
     this.flyTimer = FLY_FRAMES;
     this.invincible = FLY_FRAMES;
     this.jumpsLeft = 1;
@@ -139,6 +141,7 @@ class PlayerTank {
   endFlight() {
     this.flying = false;
     this.flyTimer = 0;
+    this.ramCd = 0;
     this.invincible = 0;
     this.hp = Math.min(this.maxHp, this.hp + (1 + Math.floor(Math.random() * 3)));
   }
