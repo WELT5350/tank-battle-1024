@@ -400,29 +400,28 @@ class CallBoss extends Enemy {
     }
     ctx.globalAlpha = 1;
 
-    // ---- 听筒本体：整体斜过来，像 📞 ----
-    ctx.save();
-    ctx.rotate(-0.52);
-
-    // 手柄：细一点的弯弧
+    // ---- 听筒本体：竖着立起来 ----
+    // 手柄：一根轻微弯曲的粗柄
     ctx.beginPath();
-    ctx.arc(0, 14, 22, Math.PI * 1.26, Math.PI * 1.74);
+    ctx.moveTo(0, -13);
+    ctx.quadraticCurveTo(-8.5, 0, 0, 13);
     ctx.strokeStyle = '#1c1c1c';
-    ctx.lineWidth = 6;
+    ctx.lineWidth = 7;
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // 两端圆鼓鼓的听筒 / 话筒
+    // 上下两端的听筒 / 话筒：横向椭圆
     for (const side of [-1, 1]) {
       ctx.save();
-      ctx.translate(side * 19.5, 0);
-      ctx.rotate(side * 0.10);
+      ctx.translate(0, side * 17);
+      ctx.rotate(side * 0.12);
 
       const pts = [];
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * Math.PI * 2;
-        pts.push([Math.cos(a) * 7.2, Math.sin(a) * 10.0]);
+        pts.push([Math.cos(a) * 9.2, Math.sin(a) * 7.4]);
       }
+      ctx.lineWidth = 2.6;
       scratchFill(ctx, '#efe9dc');
       sketchPoly(ctx, pts, 0.9);
       ctx.fill();
@@ -431,25 +430,24 @@ class CallBoss extends Enemy {
       // 网面纹路
       ctx.strokeStyle = 'rgba(60,60,60,0.5)';
       ctx.lineWidth = 1.3;
-      for (let d = -4; d <= 4; d += 4) {
+      for (let d = -3.6; d <= 3.6; d += 3.6) {
         ctx.beginPath();
-        ctx.moveTo(-3.2, d);
-        ctx.lineTo(3.2, d);
+        ctx.moveTo(d, -3);
+        ctx.lineTo(d, 3);
         ctx.stroke();
       }
       ctx.restore();
     }
-    ctx.restore();
 
     // 血条
     ctx.lineWidth = 1.6;
-    const bw = 48, bh = 5, bx = -24, by = -34;
+    const bw = 48, bh = 5, bx = -24, by = -36;
     ctx.strokeRect(bx, by, bw, bh);
     ctx.fillStyle = '#b5736a';
     ctx.fillRect(bx + 1, by + 1, (bw - 2) * clamp(this.hp / this.maxHp, 0, 1), bh - 2);
 
     // 名字
-    handText(ctx, this.label, 0, -46, 12, '#8a6a5a', 'center');
+    handText(ctx, this.label, 0, -48, 12, '#8a6a5a', 'center');
 
     ctx.restore();
   }
