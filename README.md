@@ -53,6 +53,8 @@ python3 -m http.server 8080
 
 每杀一个得 `10 × 倍率` 分。连击显示在坦克上方，掉血就断。
 
+**本地最高分榜**：保留前 5 名，存在 `localStorage` 里，开始页能看到历史最高和前三名。不联网，换浏览器/清缓存就没了。
+
 **结算评价**：
 
 - **S**：熬到下班且分数 ≥ 1400
@@ -127,6 +129,7 @@ js/utils.js       手绘风绘制工具（抖动线、潦草矩形、手写体�
 js/entities.js    实体：PlayerTank / Bullet / Enemy 及其子类 / Item
 js/audio.js       音效：用 WebAudio 现场合成，不加载任何音频文件
 js/telemetry.js   埋点：记录一局内的击杀/受伤/合体等事件，结束后可导出
+js/records.js     本地最高分榜，存在 localStorage
 js/game.js        主循环、输入、状态机、刷怪、HUD、界面切换
 ```
 

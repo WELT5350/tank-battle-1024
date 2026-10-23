@@ -45,6 +45,10 @@ const state = {
   maxCombo: 0,
   comboPop: 0,
   phase: 1,
+  board: [],
+  isBest: false,
+  recordRank: 0,
+  prevBest: 0,
 };
 
 const input = { left: false, right: false, up: false, down: false };
@@ -251,6 +255,9 @@ function startGame() {
   state.maxCombo = 0;
   state.comboPop = 0;
   state.phase = 1;
+  state.isBest = false;
+  state.recordRank = 0;
+  state.board = Records.load();
   state.tank = new PlayerTank(W / 2, GROUND - 30);
   state.hpShown = state.tank.hp;
   Telemetry.reset();
@@ -328,6 +335,7 @@ function updateRound() {
   if (state.timeLeft <= 0) {
     state.timeLeft = 0;
     state.mode = 'win';
+    saveRecord('win');
     Telemetry.log('win', { kills: state.kills });
     Sfx.stopMusic();
     Telemetry.finish({ result: 'win', kills: state.kills, hp: state.tank ? state.tank.hp : 0 });
@@ -640,6 +648,7 @@ function checkPlayerDown() {
   if (!t || t.hp > 0 || state.mode !== 'playing') return;
   state.mode = 'over';
   state.shake = 9;
+  saveRecord('over');
   Telemetry.log('death', { kills: state.kills });
   Sfx.stopMusic();
   Sfx.play('boom');
@@ -787,7 +796,9 @@ function drawHUD() {
     const pop = state.comboPop > 0 ? 1 + (state.comboPop / 12) * 0.45 : 1;
     const mult = comboMultiplier();
     ctx.save();
-    ctx.translate(t ? t.x : W / 2, 470);
+    const cx = t ? t.x : W / 2;
+    const cy = t ? Math.max(t.y - 62, 96) : 470;
+    ctx.translate(cx, cy);
     ctx.scale(pop, pop);
     handText(ctx, `${state.combo} 连击`, 0, 0, 18, '#b5736a', 'center');
     if (mult > 1) handText(ctx, `×${mult}`, 0, -24, 15, '#c9a86a', 'center');
@@ -799,6 +810,30 @@ function drawHUD() {
   ctx.restore();
 }
 
+// 一局结束时写进本地榜，返回本次是否破纪录
+function saveRecord(result) {
+  const entry = {
+    score: state.score,
+    kills: state.kills,
+    combo: state.maxCombo,
+    hp: state.tank ? state.tank.hp : 0,
+    result,
+    at: Date.now(),
+  };
+  const prevBest = bestScore();
+  const res = Records.submit(entry);
+  state.board = res.board;
+  state.isBest = res.isBest;
+  state.recordRank = res.rank;
+  state.prevBest = prevBest;
+  return res;
+}
+
+function bestScore() {
+  const b = Records.best();
+  return b ? b.score : 0;
+}
+
 // 结算评价：熬到下班才有机会拿 S
 function rankOf(survived) {
   const s = state.score;
@@ -806,6 +841,16 @@ function rankOf(survived) {
   if (survived && s >= 900) return 'A';
   if (s >= 500) return 'B';
   return 'C';
+}
+
+// 结算页那行纪录文案
+function recordLine() {
+  if (state.isBest) {
+    return state.prevBest > 0 ? `新纪录！上次最高 ${state.prevBest}` : '新纪录！这是第一局';
+  }
+  const best = bestScore();
+  if (state.recordRank > 0) return `历史最高 ${best}　本次第 ${state.recordRank} 名`;
+  return `历史最高 ${best}`;
 }
 
 // F1 调试面板：调难度时看这一屏就够了
@@ -844,11 +889,32 @@ function drawOverlay() {
   ctx.fillRect(0, 0, W, H);
 
   if (state.mode === 'ready') {
-    handText(ctx, '周一坦克', W / 2, 150, 52, '#222', 'center');
-    handText(ctx, '一个打工人熬过工作日的解压小游戏', W / 2, 200, 18, '#555', 'center');
-    handText(ctx, 'A / D 移动　　空格 跳跃　　ESC 暂停', W / 2, 320, 19, '#222', 'center');
-    handText(ctx, '鼠标 瞄准　　左键 开炮', W / 2, 356, 19, '#222', 'center');
-    handText(ctx, '按 空格 开始', W / 2, 470, 22, '#b5736a', 'center');
+    handText(ctx, '周一坦克', W / 2, 132, 52, '#222', 'center');
+    handText(ctx, '一个打工人熬过两分钟工作日的解压小游戏', W / 2, 178, 17, '#555', 'center');
+
+    // 本地最高分榜
+    const board = Records.load();
+    if (board.length) {
+      handText(ctx, `历史最高 ${board[0].score}`, W / 2, 226, 19, '#8a6a5a', 'center');
+      const tops = board.slice(0, 3);
+      tops.forEach((r, i) => {
+        const tag = r.result === 'win' ? '下班' : '倒下';
+        handText(
+          ctx,
+          `${i + 1}. ${r.score} 分 · ${r.kills} 杀 · ${tag}`,
+          W / 2,
+          256 + i * 22,
+          14,
+          '#8a8080',
+          'center'
+        );
+      });
+    } else {
+      handText(ctx, '还没有纪录，第一局就是你的', W / 2, 236, 15, '#999', 'center');
+    }
+    handText(ctx, 'A / D 移动　　空格 跳跃　　ESC 暂停', W / 2, 348, 19, '#222', 'center');
+    handText(ctx, '鼠标 瞄准　　左键 开炮', W / 2, 384, 19, '#222', 'center');
+    handText(ctx, '按 空格 开始', W / 2, 478, 22, '#b5736a', 'center');
   } else if (state.mode === 'over') {
     handText(ctx, '你倒下了', W / 2, 190, 48, '#b5736a', 'center');
     handText(ctx, rankOf(false), W / 2, 250, 44, '#8a6a5a', 'center');
@@ -862,7 +928,8 @@ function drawOverlay() {
       'center'
     );
     handText(ctx, `分数 ${state.score}`, W / 2, 336, 26, '#222', 'center');
-    handText(ctx, '按 R 再来一次', W / 2, 404, 22, '#222', 'center');
+    handText(ctx, recordLine(), W / 2, 372, 16, '#8a6a5a', 'center');
+    handText(ctx, '按 R 再来一次', W / 2, 420, 22, '#222', 'center');
   } else if (state.mode === 'paused') {
     handText(ctx, '已暂停', W / 2, 240, 46, '#222', 'center');
     handText(ctx, '按 ESC 继续，按 R 重开', W / 2, 306, 20, '#555', 'center');
@@ -879,7 +946,8 @@ function drawOverlay() {
       'center'
     );
     handText(ctx, `分数 ${state.score}`, W / 2, 336, 26, '#222', 'center');
-    handText(ctx, '按 R 再熬一天', W / 2, 404, 22, '#222', 'center');
+    handText(ctx, recordLine(), W / 2, 372, 16, '#8a6a5a', 'center');
+    handText(ctx, '按 R 再熬一天', W / 2, 420, 22, '#222', 'center');
   }
   ctx.restore();
 }
