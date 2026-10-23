@@ -26,9 +26,14 @@ function near(a, b, tol) {
 }
 
 // ---------- 载入被测代码 ----------
-const source = [read('js/utils.js'), read('js/entities.js')].join('\n');
+// 按文件分别执行（vm 的多个脚本共享词法作用域），
+// 这样 V8 覆盖率能把执行情况算到真实文件上。
 const sandbox = { console, Math, Date, performance: { now: () => Date.now() } };
 const context = vm.createContext(sandbox);
+
+for (const file of ['js/utils.js', 'js/entities.js']) {
+  vm.runInContext(read(file), context, { filename: path.join(ROOT, file) });
+}
 
 const harness = `
   const __results = [];
@@ -151,7 +156,7 @@ const harness = `
 
 let results;
 try {
-  results = vm.runInContext(source + '\n' + harness, context, { filename: 'bundle.js' });
+  results = vm.runInContext(harness, context, { filename: path.join(ROOT, 'tests/harness.js') });
 } catch (e) {
   console.error('载入被测代码失败:', e.message);
   process.exit(1);

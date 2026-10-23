@@ -214,10 +214,13 @@ ready ──空格──> playing ──ESC──> paused
 没有第三方依赖，用 Node 自带能力跑。
 
 ```bash
-npm run check     # 语法 + 两套自测
-npm run test      # 只跑逻辑自测
-npm test          # 同上
+npm run check     # lint + 格式 + 语法 + 两套自测
+npm test          # 跑两套自测
+npm run coverage  # 跑测试并统计覆盖率（低于 70% 会失败）
 ```
+
+**当前覆盖率：语句 78.67%（`utils.js` 100%、`entities.js` 93.6%、`telemetry.js` 95.8%）。**
+`audio.js` 只有 60%，因为 Node 环境里没有 AudioContext，发声路径会提前返回。
 
 两套测试，都不碰真实浏览器：
 
@@ -275,7 +278,7 @@ npm run format:check # 只检查格式
 npm run check        # lint + 语法 + 两套自测
 ```
 
-CI 会跑 `lint` + `format:check` + 语法 + 两套自测。
+CI 会跑 `lint` + `format:check` + 语法 + 两套自测 + 覆盖率门槛。
 
 ## 许可证
 

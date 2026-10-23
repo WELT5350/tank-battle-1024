@@ -72,21 +72,28 @@ const sandbox = {
   requestAnimationFrame: () => 0, // 不让它自己跑循环，由测试手动推进
 };
 
-// ---------- 载入三个文件 ----------
-const source = [
-  read('js/utils.js'),
-  read('js/entities.js'),
-  read('js/audio.js'),
-  read('js/telemetry.js'),
-  read('js/records.js'),
-  read('js/game.js'),
-  // 把内部符号导出来给测试用
-  'globalThis.__game = { state, input, startGame, update, draw, spawnWave, spawnPot, Telemetry,' +
-    '  PlayerTank, DemandEnemy, MeetingEnemy, PotEnemy, CallBoss, Item, Bullet, Sfx, Records };',
-].join('\n');
+// ---------- 按文件载入 ----------
+// vm 的多个脚本共享词法作用域，逐个文件执行后 V8 覆盖率能对上真实文件。
+const context = vm.createContext(sandbox);
+const SOURCES = [
+  'js/utils.js',
+  'js/entities.js',
+  'js/audio.js',
+  'js/telemetry.js',
+  'js/records.js',
+  'js/game.js',
+];
 
 try {
-  vm.runInNewContext(source, sandbox, { filename: 'game-bundle.js' });
+  for (const file of SOURCES) {
+    vm.runInContext(read(file), context, { filename: path.join(ROOT, file) });
+  }
+  vm.runInContext(
+    'globalThis.__game = { state, input, startGame, update, draw, spawnWave, spawnPot, Telemetry,' +
+      '  PlayerTank, DemandEnemy, MeetingEnemy, PotEnemy, CallBoss, Item, Bullet, Sfx, Records };',
+    context,
+    { filename: path.join(ROOT, 'tests/export.js') }
+  );
 } catch (e) {
   console.error('载入 game.js 失败:', e.message);
   process.exit(1);
@@ -374,6 +381,49 @@ for (let i = 0; i < 5; i++) {
 }
 assert('榜单最多保留 5 条', G.Records.load().length === 5, '长度=' + G.Records.load().length);
 assert('最高分仍在榜首', G.Records.best().score === 900);
+
+// 11e. 绘制冒烟：所有实体的 draw 都要能跑通
+// Canvas 是桩，不校验画得对不对，只保证不抛异常——
+// 能抓出 draw 里引用了不存在的变量这类只在运行时才炸的问题。
+const drawCtx = canvasStub.getContext();
+let drawError = null;
+try {
+  const tankA = new G.PlayerTank(300, 500);
+  tankA.draw(drawCtx);
+
+  const tankFly = new G.PlayerTank(300, 300);
+  tankFly.hp = 3;
+  tankFly.startFlight();
+  tankFly.draw(drawCtx);
+
+  const tankHit = new G.PlayerTank(300, 500);
+  tankHit.invincible = 60;
+  tankHit.draw(drawCtx);
+
+  new G.DemandEnemy(200, 520).draw(drawCtx);
+  new G.MeetingEnemy(200, 150).draw(drawCtx);
+  new G.PotEnemy(200, 300, 0, 0).draw(drawCtx);
+  const settledPot = new G.PotEnemy(200, 530, 0, 0);
+  settledPot.settled = true;
+  settledPot.draw(drawCtx);
+  const bossA = new G.CallBoss(400, 520);
+  bossA.draw(drawCtx);
+  bossA.hurt(4);
+  bossA.draw(drawCtx);
+
+  new G.Bullet(100, 100, 1, 0, 'player').draw(drawCtx);
+  new G.Bullet(100, 100, 1, 0, 'enemy').draw(drawCtx);
+  const homingA = new G.Bullet(100, 100, 1, 0, 'enemy');
+  homingA.homing = true;
+  homingA.draw(drawCtx);
+
+  for (const kind of ['coffee', 'fish', 'leave']) {
+    new G.Item(100, 100, kind).draw(drawCtx);
+  }
+} catch (err) {
+  drawError = err.message;
+}
+assert('所有实体都能画出来', drawError === null, drawError || '');
 
 // 12. 正常游玩不会崩
 G.startGame();
