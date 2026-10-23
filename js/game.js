@@ -255,9 +255,6 @@ function update() {
             state.kills++;
             spawnDust(e.x, e.y, '#8a6a5a', 10);
             addShake(1.2);
-            if (Math.random() < 0.22) {
-              state.items.push(new Item(e.x, e.y, Math.random() < 0.65 ? 'coffee' : 'fish'));
-            }
           }
           break;
         }
@@ -300,11 +297,16 @@ function update() {
     }
   }
   state.bullets.push(...newBullets);
+  // 掉落统一在这里结算，不管是子弹打死还是撞死的
   for (const e of state.enemies) {
-    if (e.dead && e.kind === 'boss' && !e.dropDone) {
-      e.dropDone = true;
-      state.items.push(new Item(e.x, e.y, 'leave'));
+    if (!e.dead || e.dropDone) continue;
+    e.dropDone = true;
+    if (e.kind === 'boss') {
+      state.items.push(new Item(e.x, e.y, 'leave'));      // 夺命连环 call 必掉年假
+    } else if (e.kind === 'meeting' && Math.random() < 0.38) {
+      state.items.push(new Item(e.x, e.y, Math.random() < 0.65 ? 'coffee' : 'fish'));
     }
+    // 地面的未读和锅不掉落
   }
   state.enemies = state.enemies.filter((e) => !e.dead);
 
