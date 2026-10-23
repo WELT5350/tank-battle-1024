@@ -71,7 +71,7 @@ const Telemetry = (() => {
     }
 
     if (typeof window !== 'undefined') {
-      window.__lastRound = data;
+      /** @type {any} */ (window).__lastRound = data;
     }
     return data;
   }

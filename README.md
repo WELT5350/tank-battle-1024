@@ -276,13 +276,17 @@ JSON.stringify(window.__lastRound);
 ## 工程脚本
 
 ```bash
-npm run lint         # ESLint：错误级规则
+npm run lint         # ESLint：错误级规则 + 复杂度上限
 npm run format       # Prettier 格式化
 npm run format:check # 只检查格式
-npm run check        # lint + 语法 + 两套自测
+npm run typecheck    # tsc --noEmit，静态类型检查
+npm run check        # 上面全部 + 语法 + 两套自测
+npm run coverage     # 覆盖率，低于 70% 失败
 ```
 
-CI 会跑 `lint` + `format:check` + 语法 + 两套自测 + 覆盖率门槛。
+**类型检查没有引入 TypeScript 构建**：用 `jsconfig.json` 打开 `allowJs` + `checkJs`，`tsc --noEmit` 只做检查不产出文件，**代码本身仍然是原生 JS，双击 `index.html` 照样能玩**。
+
+CI 会跑 `lint` + `format:check` + `typecheck` + 语法 + 两套自测 + 覆盖率门槛。
 
 ## 许可证
 

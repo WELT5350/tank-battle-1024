@@ -1,6 +1,6 @@
 // 主循环、输入、刷怪、HUD
 
-const canvas = document.getElementById('game');
+const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('game'));
 const ctx = canvas.getContext('2d');
 
 const ROUND_SECONDS = 120; // 一局两分钟
@@ -98,10 +98,23 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (['a', 'd', 'w', 's', ' '].includes(k)) e.preventDefault();
 
+  if (handleGlobalKey(k)) return;
+
+  if (k === 'a') input.left = true;
+  if (k === 'd') input.right = true;
+  if (k === 'w') input.up = true;
+  if (k === 's') input.down = true;
+
+  if (handleMenuKey(k)) return;
+  if (k === ' ') handleSpace();
+});
+
+// F1 调试 / ESC 暂停 / M 静音：任何时候都有效
+function handleGlobalKey(k) {
   if (k === 'f1') {
     state.debug = !state.debug;
     if (state.tank) Telemetry.log('debug_toggle', { on: state.debug });
-    return;
+    return true;
   }
 
   if (k === 'escape') {
@@ -112,7 +125,7 @@ window.addEventListener('keydown', (e) => {
       state.mode = 'playing';
       Sfx.startMusic();
     }
-    return;
+    return true;
   }
 
   if (k === 'm') {
@@ -120,43 +133,46 @@ window.addEventListener('keydown', (e) => {
     if (on && state.mode === 'playing') Sfx.startMusic();
     if (!on) Sfx.stopMusic();
     state.message = on ? '声音开' : '声音关';
-    return;
+    return true;
   }
 
-  if (k === 'a') input.left = true;
-  if (k === 'd') input.right = true;
-  if (k === 'w') input.up = true;
-  if (k === 's') input.down = true;
+  return false;
+}
 
+// 不在对局中时：暂停页和结算页都靠 R 重开
+function handleMenuKey(k) {
   if (state.mode === 'paused') {
     if (k === 'r') startGame();
-    return;
+    return true;
   }
 
   if (state.mode === 'ready' || state.mode === 'over' || state.mode === 'win') {
     if (k === 'r' || k === ' ' || k === 'enter') startGame();
-    return;
+    return true;
   }
 
-  if (k === ' ') {
-    const t = state.tank;
-    if (!t) return;
-    const now = performance.now();
-    if (now - state.lastSpaceAt < 320) {
-      // 双击空格：5 血及以下进入旋转起飞
-      if (t.canFly() && t.startFlight()) {
-        Telemetry.log('flight', { hp: t.hp });
-        state.message = '画饼升天！无敌 10 秒';
-        addShake(2.4);
-      } else if (!t.flying && t.hp > 5) {
-        state.message = '血量高于 3，飞不起来';
-      }
-    } else if (t.jump()) {
-      spawnDust(t.x, t.y + 12, '#999');
+  return false;
+}
+
+// 空格：单击跳跃，320ms 内双击且血够低就起飞
+function handleSpace() {
+  const t = state.tank;
+  if (!t) return;
+
+  const now = performance.now();
+  if (now - state.lastSpaceAt < 320) {
+    if (t.canFly() && t.startFlight()) {
+      Telemetry.log('flight', { hp: t.hp });
+      state.message = '画饼升天！无敌 10 秒';
+      addShake(2.4);
+    } else if (!t.flying && t.hp > 3) {
+      state.message = '血量高于 3，飞不起来';
     }
-    state.lastSpaceAt = now;
+  } else if (t.jump()) {
+    spawnDust(t.x, t.y + 12, '#999');
   }
-});
+  state.lastSpaceAt = now;
+}
 
 window.addEventListener('keyup', (e) => {
   const k = e.key.toLowerCase();
@@ -1038,15 +1054,35 @@ function drawOverlay() {
 
 function draw() {
   beginFrameJitter(state.frame);
+
   ctx.save();
   if (state.shake > 0.2) {
     ctx.translate(rand(-state.shake, state.shake), rand(-state.shake, state.shake));
   }
   drawBackground();
+  drawEntities();
+  ctx.restore();
+
+  drawLaser();
+  drawPops();
+  drawCrosshair();
+  drawTimeStopOverlay();
+
+  drawHUD();
+  drawDebug();
+  drawOverlay();
+}
+
+// 场景里所有会动的东西
+function drawEntities() {
   for (const it of state.items) it.draw(ctx);
   for (const e of state.enemies) e.draw(ctx);
   for (const b of state.bullets) b.draw(ctx);
   if (state.tank && state.mode !== 'over') state.tank.draw(ctx);
+  drawParticles();
+}
+
+function drawParticles() {
   for (const p of state.particles) {
     ctx.globalAlpha = clamp(p.life / 28, 0, 1);
     ctx.fillStyle = p.color;
@@ -1055,30 +1091,35 @@ function draw() {
     ctx.fill();
     ctx.globalAlpha = 1;
   }
-  ctx.restore();
+}
 
-  // 激光：一条带抖动的亮线
+// 咖啡的激光：外粗内亮两条，带一点随机闪烁
+function drawLaser() {
   const beam = laserBeam();
-  if (beam) {
-    ctx.save();
-    ctx.lineCap = 'round';
-    const flick = 0.75 + Math.random() * 0.25;
+  if (!beam) return;
 
-    ctx.strokeStyle = `rgba(201,168,106,${0.35 * flick})`;
-    ctx.lineWidth = 14;
-    wobblyLine(ctx, beam.x1, beam.y1, beam.x2, beam.y2, 12, 1.6);
+  const flick = 0.75 + Math.random() * 0.25;
 
-    ctx.strokeStyle = `rgba(255,241,196,${0.95 * flick})`;
-    ctx.lineWidth = 4;
-    wobblyLine(ctx, beam.x1, beam.y1, beam.x2, beam.y2, 12, 1.2);
+  ctx.save();
+  ctx.lineCap = 'round';
 
-    ctx.fillStyle = '#fff6d8';
-    ctx.beginPath();
-    ctx.arc(beam.x1, beam.y1, 6 + Math.random() * 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
+  ctx.strokeStyle = `rgba(201,168,106,${0.35 * flick})`;
+  ctx.lineWidth = 14;
+  wobblyLine(ctx, beam.x1, beam.y1, beam.x2, beam.y2, 12, 1.6);
 
+  ctx.strokeStyle = `rgba(255,241,196,${0.95 * flick})`;
+  ctx.lineWidth = 4;
+  wobblyLine(ctx, beam.x1, beam.y1, beam.x2, beam.y2, 12, 1.2);
+
+  ctx.fillStyle = '#fff6d8';
+  ctx.beginPath();
+  ctx.arc(beam.x1, beam.y1, 6 + Math.random() * 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// 击杀时扩散的圈
+function drawPops() {
   for (const p of state.pops) {
     const k = p.life / p.max;
     ctx.save();
@@ -1090,44 +1131,45 @@ function draw() {
     ctx.stroke();
     ctx.restore();
   }
+}
 
-  if (state.mode === 'playing' && !(state.tank && state.tank.flying)) {
-    const m = state.mouse;
-    ctx.save();
-    ctx.strokeStyle = 'rgba(40,40,40,.55)';
-    ctx.lineWidth = 1.6;
+function drawCrosshair() {
+  if (state.mode !== 'playing' || (state.tank && state.tank.flying)) return;
+
+  const m = state.mouse;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(40,40,40,.55)';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.arc(m.x, m.y, 7, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(m.x - 11, m.y);
+  ctx.lineTo(m.x - 3, m.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(m.x + 3, m.y);
+  ctx.lineTo(m.x + 11, m.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// 年假生效时压一层冷色和扫描线
+function drawTimeStopOverlay() {
+  if (state.timeStop <= 0) return;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(120,150,180,0.16)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(70,100,130,0.10)';
+  ctx.lineWidth = 1;
+  for (let y = (state.frame * 2) % 8; y < H; y += 8) {
     ctx.beginPath();
-    ctx.arc(m.x, m.y, 7, 0, Math.PI * 2);
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(m.x - 11, m.y);
-    ctx.lineTo(m.x - 3, m.y);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(m.x + 3, m.y);
-    ctx.lineTo(m.x + 11, m.y);
-    ctx.stroke();
-    ctx.restore();
   }
-
-  if (state.timeStop > 0) {
-    ctx.save();
-    ctx.fillStyle = 'rgba(120,150,180,0.16)';
-    ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = 'rgba(70,100,130,0.10)';
-    ctx.lineWidth = 1;
-    for (let y = (state.frame * 2) % 8; y < H; y += 8) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(W, y);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  drawHUD();
-  drawDebug();
-  drawOverlay();
+  ctx.restore();
 }
 
 // ---------- 主循环 ----------
