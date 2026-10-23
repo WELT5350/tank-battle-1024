@@ -6,7 +6,7 @@
   "scripts": {
     "syntax": "node --check js/utils.js && node --check js/entities.js && node --check js/game.js && node --check tests/run.js && node --check tests/game-loop.js",
     "test": "node tests/run.js && node tests/game-loop.js",
-    "check": "npm run lint && npm run syntax && npm run test",
+    "check": "npm run lint && npm run format:check && npm run syntax && npm run test",
     "start": "python3 -m http.server 8080",
     "lint": "eslint js tests",
     "format": "prettier --write .",

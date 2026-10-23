@@ -227,7 +227,11 @@ prey3.speed = 0;
 state.enemies.push(prey3);
 state.bullets.push(new G.Bullet(500, 539, 0, 0, 'player'));
 step(1);
-assert('击杀后有连击', state.combo === 1, `combo=${state.combo} kills=${state.kills} 敌人=${state.enemies.length}`);
+assert(
+  '击杀后有连击',
+  state.combo === 1,
+  `combo=${state.combo} kills=${state.kills} 敌人=${state.enemies.length}`
+);
 step(130);
 assert('超过 2 秒连击清零', state.combo === 0, 'combo=' + state.combo);
 
