@@ -93,6 +93,25 @@ const Sfx = (() => {
     },
     merge: () => tone({ freq: 130, to: 55, dur: 0.5, type: 'sawtooth', gain: 0.6 }),
     over: () => tone({ freq: 300, to: 55, dur: 0.8, type: 'square', gain: 0.6 }),
+    boom: () => {
+      noise({ dur: 0.55, gain: 0.9 });
+      tone({ freq: 110, to: 26, dur: 0.55, type: 'sine', gain: 0.95 });
+      tone({ freq: 70, to: 22, dur: 0.75, type: 'triangle', gain: 0.6, delay: 0.03 });
+    },
+    // 老式电话的丁零零：两组快速颤音
+    ring: () => {
+      for (let burst = 0; burst < 2; burst++) {
+        for (let i = 0; i < 8; i++) {
+          tone({
+            freq: i % 2 ? 1380 : 1760,
+            dur: 0.045,
+            type: 'sine',
+            gain: burst ? 0.26 : 0.32,
+            delay: burst * 0.5 + i * 0.048,
+          });
+        }
+      }
+    },
     win: () => {
       [523, 659, 784, 1046].forEach((f, i) => {
         tone({ freq: f, dur: 0.16, type: 'sine', gain: 0.45, delay: i * 0.12 });

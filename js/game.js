@@ -10,6 +10,7 @@ const MERGE_RADIUS = 50;       // 这几只之间的距离上限，太远不算�
 const FLY_RAM_DAMAGE = 3;      // 飞行撞击伤害
 const RAM_COOLDOWN_FRAMES = 18; // 两次撞击间隔，防止贴脸连续判定
 const POT_INTERVAL_FRAMES = 900; // 锅固定 15 秒飞进来一个
+const RING_INTERVAL_FRAMES = 105; // 电话还活着时，多久响一次
 
 const state = {
   mode: 'ready',      // ready | playing | over | win
@@ -30,6 +31,7 @@ const state = {
   timeStop: 0,
   potTimer: 900,
   debug: false,
+  ringTimer: 0,
 };
 
 const input = { left: false, right: false, up: false, down: false };
@@ -185,6 +187,7 @@ function startGame() {
   state.lastSpaceAt = 0;
   state.timeStop = 0;
   state.potTimer = POT_INTERVAL_FRAMES;
+  state.ringTimer = 0;
   state.tank = new PlayerTank(W / 2, GROUND - 30);
   Telemetry.reset();
   Telemetry.log('round_start');
@@ -227,6 +230,7 @@ function update() {
   updateBullets(frozen);
   updateEnemies(frozen);
   updateItems();
+  updateBossRing();
   updateEffects();
   checkPlayerDown();
 }
@@ -471,6 +475,22 @@ function updateItems() {
   state.items = state.items.filter((it) => !it.dead);
 }
 
+// ---------- 电话铃 ----------
+// 夺命连环 call 还在场时，每隔一阵子响一次
+function updateBossRing() {
+  const alive = state.enemies.some((e) => e.kind === 'boss' && !e.dead);
+  if (!alive) {
+    state.ringTimer = 0;
+    return;
+  }
+  if (state.ringTimer > 0) {
+    state.ringTimer--;
+    return;
+  }
+  Sfx.play('ring');
+  state.ringTimer = RING_INTERVAL_FRAMES;
+}
+
 // ---------- 粒子与抖动 ----------
 function updateEffects() {
   for (const p of state.particles) {
@@ -505,6 +525,7 @@ function checkPlayerDown() {
   state.mode = 'over';
   state.shake = 9;
   Telemetry.log('death', { kills: state.kills });
+  Sfx.play('boom');
   Telemetry.finish({ result: 'over', kills: state.kills, timeLeft: Math.round(state.timeLeft) });
   Sfx.play('over');
   spawnDust(t.x, t.y, '#b5736a', 24);
