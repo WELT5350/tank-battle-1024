@@ -217,7 +217,6 @@ class Enemy {
     this.age = 0;
     this.hp = 1;
     this.labelOff = rand(-9, 9);
-    this.label = { demand: '临时需求', meeting: '周会通知', pot: '隔壁的锅' }[kind];
   }
 
   // 所有敌人共用的受伤接口：扣血，归零即死
