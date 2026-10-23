@@ -19,7 +19,7 @@ const Sfx = (() => {
       master.connect(audio.destination);
 
       musicBus = audio.createGain();
-      musicBus.gain.value = 0.34;
+      musicBus.gain.value = 0.60; // 背景音乐总音量
       musicBus.connect(master);
     } catch (e) {
       return null;
@@ -181,7 +181,7 @@ const Sfx = (() => {
         midiToFreq(chord[0] - 12) * pitchScale(),
         when,
         (STEP * 1.8) / musicSpeed,
-        0.16,
+        0.18,
         'sine'
       );
     }
@@ -192,7 +192,7 @@ const Sfx = (() => {
         midiToFreq(note) * pitchScale(),
         when,
         (STEP * 1.2) / musicSpeed,
-        0.055,
+        0.07,
         'triangle'
       );
     }
