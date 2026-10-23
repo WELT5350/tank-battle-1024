@@ -49,6 +49,11 @@ const harness = `
   T('碰撞：刚好接触', hitCircle({x:0,y:0}, 5, {x:9,y:0}, 5) === true);
   T('碰撞：差一点', hitCircle({x:0,y:0}, 5, {x:11,y:0}, 5) === false);
 
+  // 2b. 点到线段的距离（激光判定）
+  T('线段上的点距离为 0', near(distToSegment(5, 0, 0, 0, 10, 0), 0, 0.001));
+  T('垂直距离算得对', near(distToSegment(5, 4, 0, 0, 10, 0), 4, 0.001));
+  T('超出端点按端点算', near(distToSegment(-3, 0, 0, 0, 10, 0), 3, 0.001));
+
   // 3. 跳跃高度
   const tank = new PlayerTank(480, GROUND - 13);
   const startY = tank.y;

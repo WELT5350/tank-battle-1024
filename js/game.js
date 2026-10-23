@@ -8,6 +8,9 @@ const PHASE_BOUNDS = [40, 80]; // 40 秒后加压，80 秒后冲刺
 const COMBO_WINDOW = 120; // 连击窗口：2 秒内再杀才算连上
 const COMBO_MAX_MULT = 5; // 连击倍率上限
 const SCORE_PER_KILL = 10; // 每杀一个的基础分
+const LASER_FRAMES = 180; // 咖啡：激光持续 3 秒
+const LASER_TICK = 5; // 激光每 5 帧结算一次伤害
+const LASER_WIDTH = 16; // 激光判定宽度
 const TIME_STOP_FRAMES = 300; // 年假：时间停止 5 秒
 const MERGE_COUNT = 3; // 几只未读合体
 const MERGE_RADIUS = 50; // 这几只之间的距离上限，太远不算一坨
@@ -168,6 +171,17 @@ function killFeedback(x, y) {
   spawnDust(x, y, '#8a6a5a', 12);
   state.pops.push({ x, y, r: 8, life: 22, max: 22 });
   Sfx.play('kill');
+}
+
+// 激光从炮口射出，沿瞄准方向打到屏幕外
+function laserBeam() {
+  const t = state.tank;
+  if (!t || t.laserTimer <= 0) return null;
+  const ox = Math.cos(t.aimAngle);
+  const oy = Math.sin(t.aimAngle);
+  const x1 = t.x + ox * 26;
+  const y1 = t.y - t.h * 0.2 + oy * 26;
+  return { x1, y1, x2: x1 + ox * 900, y2: y1 + oy * 900 };
 }
 
 // ---------- 连击与分数 ----------
@@ -379,9 +393,35 @@ function updateTank(frozen) {
   }
   t.update(input);
 
+  if (t.laserTimer > 0) updateLaser(t);
   if (t.flying) autoFireDuringFlight(t);
   if (frozen) crushFrozenEnemies(t);
   else if (t.flying) ramEnemies(t);
+}
+
+// 咖啡的激光：扫到的敌人每 5 帧掉 1 点
+function updateLaser(t) {
+  t.laserTimer--;
+  if (state.frame % LASER_TICK !== 0) return;
+
+  const beam = laserBeam();
+  if (!beam) return;
+
+  for (const e of state.enemies) {
+    if (e.dead) continue;
+    if (distToSegment(e.x, e.y, beam.x1, beam.y1, beam.x2, beam.y2) > e.r + LASER_WIDTH / 2) {
+      continue;
+    }
+    e.hurt(1);
+    spawnDust(e.x, e.y, '#c9a86a', 3);
+    if (e.dead) {
+      state.kills++;
+      registerKill();
+      killFeedback(e.x, e.y);
+      Telemetry.log('kill', { kind: e.kind, by: 'laser' });
+    }
+  }
+  Sfx.play('laserTick');
 }
 
 // 起飞时炮管自动连射
@@ -565,13 +605,13 @@ function updateItems() {
     if (it.dead || !t || !hitCircle(it, it.r, t, 24)) continue;
     it.dead = true;
     Telemetry.log('pickup', { kind: it.kind });
-    Sfx.play(it.kind === 'leave' ? 'timestop' : 'pickup');
+    Sfx.play(it.kind === 'coffee' ? 'laser' : it.kind === 'leave' ? 'timestop' : 'pickup');
     if (it.kind === 'coffee') {
-      t.hp = Math.min(t.maxHp, t.hp + 3);
-      state.message = '续命一口 +3';
+      t.laserTimer = LASER_FRAMES;
+      state.message = '咖啡下肚，激光 3 秒';
     } else if (it.kind === 'fish') {
-      t.invincible = Math.max(t.invincible, 180);
-      state.message = '摸鱼 3 秒';
+      t.hp = Math.min(t.maxHp, t.hp + 3);
+      state.message = '摸鱼回血 +3';
     } else {
       state.timeStop = TIME_STOP_FRAMES;
       Sfx.setMusicSpeed(0.42);
@@ -609,6 +649,28 @@ function updateEffects() {
   }
   state.particles = state.particles.filter((p) => p.life > 0);
 
+  // 激光：一条带抖动的亮线
+  const beam = laserBeam();
+  if (beam) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    const flick = 0.75 + Math.random() * 0.25;
+
+    ctx.strokeStyle = `rgba(201,168,106,${0.35 * flick})`;
+    ctx.lineWidth = 14;
+    wobblyLine(ctx, beam.x1, beam.y1, beam.x2, beam.y2, 12, 1.6);
+
+    ctx.strokeStyle = `rgba(255,241,196,${0.95 * flick})`;
+    ctx.lineWidth = 4;
+    wobblyLine(ctx, beam.x1, beam.y1, beam.x2, beam.y2, 12, 1.2);
+
+    ctx.fillStyle = '#fff6d8';
+    ctx.beginPath();
+    ctx.arc(beam.x1, beam.y1, 6 + Math.random() * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   for (const p of state.pops) {
     p.r += 1.6;
     p.life--;
@@ -633,6 +695,7 @@ function updateEffects() {
       state.hpFlash = 26;
       state.hpPop = { n: state.hpShown - t.hp, life: 46, max: 46 };
       addShake(1.8);
+      t.damageBlink = 18;
       resetCombo();
     }
     state.hpShown = t.hp;
@@ -993,6 +1056,28 @@ function draw() {
     ctx.globalAlpha = 1;
   }
   ctx.restore();
+
+  // 激光：一条带抖动的亮线
+  const beam = laserBeam();
+  if (beam) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    const flick = 0.75 + Math.random() * 0.25;
+
+    ctx.strokeStyle = `rgba(201,168,106,${0.35 * flick})`;
+    ctx.lineWidth = 14;
+    wobblyLine(ctx, beam.x1, beam.y1, beam.x2, beam.y2, 12, 1.6);
+
+    ctx.strokeStyle = `rgba(255,241,196,${0.95 * flick})`;
+    ctx.lineWidth = 4;
+    wobblyLine(ctx, beam.x1, beam.y1, beam.x2, beam.y2, 12, 1.2);
+
+    ctx.fillStyle = '#fff6d8';
+    ctx.beginPath();
+    ctx.arc(beam.x1, beam.y1, 6 + Math.random() * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 
   for (const p of state.pops) {
     const k = p.life / p.max;

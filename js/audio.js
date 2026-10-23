@@ -87,6 +87,13 @@ const Sfx = (() => {
       noise({ dur: 0.09, gain: 0.4 });
     },
     hurt: () => tone({ freq: 210, to: 75, dur: 0.22, type: 'square', gain: 0.65 }),
+    // 激光启动：一声上扬的锯齿
+    laser: () => {
+      tone({ freq: 500, to: 1400, dur: 0.22, type: 'sawtooth', gain: 0.5 });
+      tone({ freq: 250, to: 700, dur: 0.22, type: 'square', gain: 0.25 });
+    },
+    // 激光持续中的轻微嘶声
+    laserTick: () => tone({ freq: 1200, to: 900, dur: 0.03, type: 'sawtooth', gain: 0.12 }),
     pickup: () => {
       tone({ freq: 620, dur: 0.07, type: 'sine', gain: 0.55 });
       tone({ freq: 900, dur: 0.1, type: 'sine', gain: 0.45, delay: 0.07 });

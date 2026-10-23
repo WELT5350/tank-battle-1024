@@ -382,6 +382,50 @@ for (let i = 0; i < 5; i++) {
 assert('榜单最多保留 5 条', G.Records.load().length === 5, '长度=' + G.Records.load().length);
 assert('最高分仍在榜首', G.Records.best().score === 900);
 
+// 11f. 道具效果：咖啡给激光，摸鱼回血
+G.startGame();
+clearEnemies();
+state.tank.hp = 5;
+state.items.length = 0;
+const coffeeItem = new G.Item(state.tank.x, state.tank.y - 10, 'coffee');
+coffeeItem.vy = 0;
+state.items.push(coffeeItem);
+step(1);
+assert('咖啡变成激光', state.tank.laserTimer > 0, 'laserTimer=' + state.tank.laserTimer);
+
+G.startGame();
+clearEnemies();
+state.tank.hp = 4;
+state.items.length = 0;
+const fishItem = new G.Item(state.tank.x, state.tank.y - 10, 'fish');
+fishItem.vy = 0;
+state.items.push(fishItem);
+step(1);
+assert('摸鱼回血 +3', state.tank.hp === 7, 'hp=' + state.tank.hp);
+
+// 11g. 激光能打到光束上的敌人
+G.startGame();
+clearEnemies();
+state.tank.x = 200;
+step(40); // 等坦克落地，炮口高度稳定
+state.mouse.x = 900;
+state.mouse.y = state.tank.y - state.tank.h * 0.2; // 让光束水平
+state.tank.laserTimer = 60;
+const beamTarget = new G.DemandEnemy(600, state.mouse.y);
+beamTarget.speed = 0;
+state.enemies.push(beamTarget);
+const beamTargetHp = beamTarget.hp;
+step(12);
+assert('激光打到直线上的敌人', beamTarget.dead === true, 'hp=' + beamTarget.hp);
+
+// 光束外的敌人不受影响
+// 用空中的周会通知，未读会自己趴回地面反而被扫到
+const offBeam = new G.MeetingEnemy(600, state.mouse.y - 200);
+offBeam.speed = 0;
+state.enemies.push(offBeam);
+step(12);
+assert('光束外的敌人不掉血', offBeam.hp === beamTargetHp, 'hp=' + offBeam.hp);
+
 // 11e. 绘制冒烟：所有实体的 draw 都要能跑通
 // Canvas 是桩，不校验画得对不对，只保证不抛异常——
 // 能抓出 draw 里引用了不存在的变量这类只在运行时才炸的问题。

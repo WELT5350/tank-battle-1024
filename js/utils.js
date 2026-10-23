@@ -129,3 +129,13 @@ function scratchFill(ctx, color) {
 function hitCircle(a, ar, b, br) {
   return dist(a, b) < ar + br;
 }
+
+// 点到线段的距离，用来判断激光有没有扫到敌人
+function distToSegment(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+  const t = clamp(((px - x1) * dx + (py - y1) * dy) / lenSq, 0, 1);
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
