@@ -36,10 +36,7 @@ function wobblyLine(ctx, x1, y1, x2, y2, seg = 4, amp = 1.6) {
   ctx.moveTo(x1 + jitter(amp), y1 + jitter(amp));
   for (let i = 1; i <= seg; i++) {
     const t = i / seg;
-    ctx.lineTo(
-      lerp(x1, x2, t) + jitter(amp),
-      lerp(y1, y2, t) + jitter(amp)
-    );
+    ctx.lineTo(lerp(x1, x2, t) + jitter(amp), lerp(y1, y2, t) + jitter(amp));
   }
   ctx.stroke();
 }
@@ -73,7 +70,12 @@ function sketchPoly(ctx, pts, amp = 1.1) {
 
 // 潦草矩形：构建单条闭合路径，供 fill 使用
 function wobblyRect(ctx, x, y, w, h, amp = 1.8) {
-  const corners = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+  const corners = [
+    [x, y],
+    [x + w, y],
+    [x + w, y + h],
+    [x, y + h],
+  ];
   const segs = 3;
   ctx.beginPath();
   let first = true;
@@ -84,8 +86,10 @@ function wobblyRect(ctx, x, y, w, h, amp = 1.8) {
       const t = s / segs;
       const px = lerp(x1, x2, t) + jitter(amp);
       const py = lerp(y1, y2, t) + jitter(amp);
-      if (first) { ctx.moveTo(px, py); first = false; }
-      else ctx.lineTo(px, py);
+      if (first) {
+        ctx.moveTo(px, py);
+        first = false;
+      } else ctx.lineTo(px, py);
     }
   }
   ctx.closePath();

@@ -58,13 +58,14 @@ const Telemetry = (() => {
 
     if (typeof console !== 'undefined' && console.log) {
       console.log('%c[周一坦克] 本局数据', 'color:#8a6a5a;font-weight:bold');
-      console.log('时长 %s 秒 | 击杀 %s | 受伤 %s 次 | 合体 %s 次 | 起飞 %s 次 | 时停 %s 次',
+      console.log(
+        '时长 %s 秒 | 击杀 %s | 受伤 %s 次 | 合体 %s 次 | 起飞 %s 次 | 时停 %s 次',
         data.duration,
-        (data.counts.kill || 0),
-        (data.counts.damage || 0),
-        (data.counts.merge || 0),
-        (data.counts.flight || 0),
-        (data.counts.timestop || 0)
+        data.counts.kill || 0,
+        data.counts.damage || 0,
+        data.counts.merge || 0,
+        data.counts.flight || 0,
+        data.counts.timestop || 0
       );
       console.log('复制这段发给开发者：JSON.stringify(window.__lastRound)');
     }
@@ -82,8 +83,14 @@ const Telemetry = (() => {
     finish,
     summary,
     // 供调试面板用
-    recent(n) { return events.slice(-(n || 6)); },
-    get size() { return events.length; },
-    get duration() { return elapsed; },
+    recent(n) {
+      return events.slice(-(n || 6));
+    },
+    get size() {
+      return events.length;
+    },
+    get duration() {
+      return elapsed;
+    },
   };
 })();

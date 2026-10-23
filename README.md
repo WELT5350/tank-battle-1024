@@ -18,14 +18,14 @@ python3 -m http.server 8080
 
 ## 操作
 
-| 按键 | 动作 |
-| --- | --- |
-| `A` / `D` | 左右移动 |
-| `M` | 静音 / 取消静音 |
-| `空格` | 跳跃 |
-| `鼠标` | 瞄准，炮管跟随指针 |
-| `左键` | 开炮，点得越快射得越快 |
-| `ESC` | 暂停 |
+| 按键      | 动作                   |
+| --------- | ---------------------- |
+| `A` / `D` | 左右移动               |
+| `M`       | 静音 / 取消静音        |
+| `空格`    | 跳跃                   |
+| `鼠标`    | 瞄准，炮管跟随指针     |
+| `左键`    | 开炮，点得越快射得越快 |
+| `ESC`     | 暂停                   |
 
 **空中再按空格不能二段跳；落地才会恢复。**
 
@@ -47,10 +47,10 @@ python3 -m http.server 8080
 
 ### 三类职场怪
 
-| 名字 | 出现位置 | 行为 | 代价 |
-| --- | --- | --- | --- |
-| **未读** | 地面 | 直冲玩家，撞上即自爆 | 扣 1 点 |
-| **周会通知** | 空中盘旋 | 定期发射**追踪弹**，会拐弯追人 | 扣 1 点 |
+| 名字         | 出现位置                   | 行为                                                 | 代价        |
+| ------------ | -------------------------- | ---------------------------------------------------- | ----------- |
+| **未读**     | 地面                       | 直冲玩家，撞上即自爆                                 | 扣 1 点     |
+| **周会通知** | 空中盘旋                   | 定期发射**追踪弹**，会拐弯追人                       | 扣 1 点     |
 | **隔壁的锅** | 固定每 15 秒从屏幕一侧飞入 | 落地连弹三次（约 50 / 29 / 16 像素）后静置，踩到会碎 | 碰到扣 2 点 |
 
 **追踪弹**每帧最多转向 0.052 弧度，可以靠急跳甩开，站着不动必中。
@@ -101,15 +101,40 @@ js/telemetry.js   埋点：记录一局内的击杀/受伤/合体等事件，结
 js/game.js        主循环、输入、状态机、刷怪、HUD、界面切换
 ```
 
+### 依赖方向
+
+```mermaid
+graph TD
+  E["entities.js<br/>坦克 / 子弹 / 敌怪 / 道具"]
+  U["utils.js<br/>画线、抖动、数学"]
+  A["audio.js<br/>音效与音乐合成"]
+  T["telemetry.js<br/>事件记录"]
+  G["game.js<br/>主循环 / 输入 / 状态机 / HUD"]
+  H["index.html<br/>画布入口"]
+
+  E --> U
+  G --> E
+  G --> A
+  G --> T
+  G --> U
+  H --> G
+  H --> A
+  H --> T
+  H --> E
+  H --> U
+```
+
+箭头只朝一个方向：`game.js` 认识所有模块，`entities.js` 只认识 `utils.js`，`utils.js` 谁都不认识。
+
 ### 模块职责
 
-| 模块 | 只管什么 |
-| --- | --- |
-| `utils.js` | 画线和数学，不知道任何游戏规则 |
-| `audio.js` | 只负责发声，不认识游戏对象 |
-| `telemetry.js` | 只负责记录事件，不参与玩法判定 |
-| `entities.js` | 单个实体的状态与行为，不知道关卡和界面 |
-| `game.js` | 编排：读输入、更新世界、判定碰撞、画界面 |
+| 模块           | 只管什么                                 |
+| -------------- | ---------------------------------------- |
+| `utils.js`     | 画线和数学，不知道任何游戏规则           |
+| `audio.js`     | 只负责发声，不认识游戏对象               |
+| `telemetry.js` | 只负责记录事件，不参与玩法判定           |
+| `entities.js`  | 单个实体的状态与行为，不知道关卡和界面   |
+| `game.js`      | 编排：读输入、更新世界、判定碰撞、画界面 |
 
 ### 状态机
 
@@ -136,21 +161,21 @@ ready ──空格──> playing ──ESC──> paused
 
 集中在文件顶部的常量里：
 
-| 常量 | 位置 | 含义 |
-| --- | --- | --- |
-| `MAX_HP` | entities.js | 血量上限 |
-| `FLY_FRAMES` | entities.js | 画饼升天时长 |
-| `JUMP_VELOCITY` | entities.js | 跳跃初速 |
-| `BULLET_SPEED` | entities.js | 子弹速度 |
-| `ROUND_SECONDS` | game.js | 一局时长 |
-| `TIME_STOP_FRAMES` | game.js | 时间停止时长 |
-| `MERGE_COUNT` | game.js | 合体需要几只未读 |
-| `MERGE_RADIUS` | game.js | 合体要求这几只彼此的最大距离 |
-| `POT_BOUNCE_SPEEDS` | entities.js | 锅每次弹起的初速 |
-| `POT_INTERVAL_FRAMES` | game.js | 锅的出场间隔 |
-| `POT_DAMAGE` | entities.js | 锅碰到扣的血 |
-| `FLY_RAM_DAMAGE` | game.js | 飞行撞击伤害 |
-| `RAM_COOLDOWN_FRAMES` | game.js | 飞行撞击冷却 |
+| 常量                  | 位置        | 含义                         |
+| --------------------- | ----------- | ---------------------------- |
+| `MAX_HP`              | entities.js | 血量上限                     |
+| `FLY_FRAMES`          | entities.js | 画饼升天时长                 |
+| `JUMP_VELOCITY`       | entities.js | 跳跃初速                     |
+| `BULLET_SPEED`        | entities.js | 子弹速度                     |
+| `ROUND_SECONDS`       | game.js     | 一局时长                     |
+| `TIME_STOP_FRAMES`    | game.js     | 时间停止时长                 |
+| `MERGE_COUNT`         | game.js     | 合体需要几只未读             |
+| `MERGE_RADIUS`        | game.js     | 合体要求这几只彼此的最大距离 |
+| `POT_BOUNCE_SPEEDS`   | entities.js | 锅每次弹起的初速             |
+| `POT_INTERVAL_FRAMES` | game.js     | 锅的出场间隔                 |
+| `POT_DAMAGE`          | entities.js | 锅碰到扣的血                 |
+| `FLY_RAM_DAMAGE`      | game.js     | 飞行撞击伤害                 |
+| `RAM_COOLDOWN_FRAMES` | game.js     | 飞行撞击冷却                 |
 
 ## 测试
 
@@ -164,10 +189,10 @@ npm test          # 同上
 
 两套测试，都不碰真实浏览器：
 
-| 文件 | 覆盖 | 项数 |
-| --- | --- | --- |
-| `tests/run.js` | 纯函数与实体：数学、碰撞、血量、跳高、追踪弹转向、锅的弹跳与静置 | 40 |
-| `tests/game-loop.js` | 主循环：合体触发、时停撞击、时停冻结倒计时、暂停、锅的出场节奏、击杀反馈、电话铃声开关、音频接口健壮性、埋点记录、连续 600 帧不崩 | 33 |
+| 文件                 | 覆盖                                                                                                                              | 项数 |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| `tests/run.js`       | 纯函数与实体：数学、碰撞、血量、跳高、追踪弹转向、锅的弹跳与静置                                                                  | 40   |
+| `tests/game-loop.js` | 主循环：合体触发、时停撞击、时停冻结倒计时、暂停、锅的出场节奏、击杀反馈、电话铃声开关、音频接口健壮性、埋点记录、连续 600 帧不崩 | 33   |
 
 `game-loop.js` 用 Proxy 造了 Canvas 和 DOM 的桩，把 `game.js` 也跑起来，然后手动推进帧。
 
@@ -196,7 +221,7 @@ CI 在每次 push 到 `main` 和每个 PR 上自动跑这套检查（`.github/wo
 一局结束（阵亡或熬到下班）时，控制台会打印本局汇总，同时数据挂在 `window.__lastRound` 上：
 
 ```js
-JSON.stringify(window.__lastRound)
+JSON.stringify(window.__lastRound);
 ```
 
 记录的事件类型：`round_start` / `spawn` / `pot_spawn` / `kill`（带 `kind` 和 `by`）/ `damage` / `pickup` / `merge` / `flight` / `death` / `win`。
@@ -208,6 +233,21 @@ JSON.stringify(window.__lastRound)
 - 每次变更通过 Pull Request 提交
 - `v0` tag 标记在空骨架基线（`ad2f411`），之后所有代码均为本项目新增
 - 提交信息统一 `type: 描述`
+
+## 工程脚本
+
+```bash
+npm run lint         # ESLint：错误级规则
+npm run format       # Prettier 格式化
+npm run format:check # 只检查格式
+npm run check        # lint + 语法 + 两套自测
+```
+
+CI 会跑 `lint` + `format:check` + 语法 + 两套自测。
+
+## 许可证
+
+MIT，见 [LICENSE](LICENSE)。更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 已知限制
 
