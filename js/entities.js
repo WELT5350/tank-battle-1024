@@ -36,7 +36,7 @@ class PlayerTank {
     this.w = 46; this.h = 26;
     this.aimAngle = -Math.PI / 2;
     this.onGround = true;
-    this.jumpsLeft = 2;
+    this.jumpsLeft = 1;
     this.hp = 10;
     this.maxHp = 10;
     this.invincible = 0;
@@ -71,7 +71,7 @@ class PlayerTank {
       this.y = floor;
       if (this.vy > 3) this.vy = -this.vy * 0.18;
       else this.vy = 0;
-      if (!this.flying) { this.onGround = true; this.jumpsLeft = 2; }
+      if (!this.flying) { this.onGround = true; this.jumpsLeft = 1; }
     } else {
       this.onGround = false;
     }
@@ -101,7 +101,7 @@ class PlayerTank {
     this.flying = true;
     this.flyTimer = 600;       // 10 秒 @60fps
     this.invincible = 600;
-    this.jumpsLeft = 2;
+    this.jumpsLeft = 1;
     return true;
   }
 
