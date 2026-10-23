@@ -305,22 +305,46 @@ class PotEnemy extends Enemy {
     super(x, y, 'pot');
     this.r = 19;
     this.vx = vx; this.vy = vy;
-    this.landed = false;
+    this.bounced = false;
+    this.settled = false;
+    this.restLife = 0;
   }
   update(player) {
     this.age++;
-    this.vy += GRAVITY * 0.10;   // 锅落得很慢，才看得清是什么
+
+    // 已经落定的锅：静静躺一会儿再消失
+    if (this.settled) {
+      this.restLife++;
+      if (this.restLife > 420) this.dead = true;
+      return;
+    }
+
+    // 弹跳阶段用正常重力，飘落阶段用很小的重力
+    this.vy += this.bounced ? GRAVITY * 0.7 : GRAVITY * 0.10;
     this.x += this.vx;
     this.y += this.vy;
+
     if (hitCircle(this, this.r, player, 22)) {
       player.damage(2);
       this.dead = true;
       return;
     }
+
     if (this.y > GROUND - this.r) {
-      this.dead = true;
-      if (Math.abs(this.x - player.x) < 60) player.damage(1);
+      this.y = GROUND - this.r;
+      if (!this.bounced) {
+        // 第一次落地：弹一下
+        this.bounced = true;
+        this.vy = -3.2;
+        this.vx *= 0.5;
+      } else {
+        // 第二次落地：停住不动
+        this.settled = true;
+        this.vx = 0;
+        this.vy = 0;
+      }
     }
+
     if (this.x < -60 || this.x > W + 60) this.dead = true;
   }
   draw(ctx) {
@@ -336,7 +360,8 @@ class PotEnemy extends Enemy {
     ctx.lineWidth = 2.4;
     ctx.strokeStyle = '#1c1c1c';
     scratchFill(ctx, '#f0ece0');
-    wobblyCircle(ctx, this.x, this.y, this.r, 8, 2);
+    const r = this.settled ? this.r * 0.94 : this.r;
+    wobblyCircle(ctx, this.x, this.y, r, 8, 2);
     ctx.fill(); ctx.stroke();
     handText(ctx, '锅', this.x, this.y + 1, 15, '#333', 'center');
     ctx.restore();
