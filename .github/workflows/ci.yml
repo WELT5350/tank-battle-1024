@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    name: 语法 + 逻辑自测
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 语法检查
+        run: |
+          node --check js/utils.js
+          node --check js/entities.js
+          node --check js/game.js
+          node --check tests/run.js
+
+      - name: 逻辑自测
+        run: node tests/run.js
+
+      - name: 静态资源完整性
+        run: |
+          test -f index.html
+          test -f preview.html
+          test -f README.md
