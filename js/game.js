@@ -810,10 +810,68 @@ function draw() {
   drawOverlay();
 }
 
-function loop() {
-  update();
-  draw();
+// ---------- 主循环 ----------
+// update 固定按 60Hz 推进，draw 跟着屏幕刷新率走。
+// 这样在 120Hz 显示器上不会变成两倍速，低帧率时也不会瞬间追帧。
+const STEP_MS = 1000 / 60;
+const MAX_CATCHUP_STEPS = 5;
+
+let lastTime = 0;
+let accum = 0;
+let crashed = null;
+
+function loop(now) {
+  try {
+    const t = typeof now === 'number' ? now : performance.now();
+    if (!lastTime) lastTime = t;
+    let delta = t - lastTime;
+    lastTime = t;
+
+    // 切标签页回来时 delta 会很大，截断避免一口气补几百帧
+    if (delta > 250) delta = STEP_MS;
+    accum += delta;
+
+    let steps = 0;
+    while (accum >= STEP_MS && steps < MAX_CATCHUP_STEPS) {
+      update();
+      accum -= STEP_MS;
+      steps++;
+    }
+    if (steps === MAX_CATCHUP_STEPS) accum = 0;
+
+    draw();
+  } catch (err) {
+    crashed = err;
+    drawCrashScreen(err);
+    return; // 停掉循环，不再 requestAnimationFrame
+  }
+
   requestAnimationFrame(loop);
 }
 
-loop();
+// 出错时不要只留一个定格的画面
+function drawCrashScreen(err) {
+  try {
+    ctx.save();
+    ctx.fillStyle = 'rgba(243,242,236,0.96)';
+    ctx.fillRect(0, 0, W, H);
+    handText(ctx, '出错了', W / 2, 240, 42, '#b5736a', 'center');
+    handText(ctx, '刷新页面重试', W / 2, 300, 20, '#222', 'center');
+    const msg = err && err.message ? String(err.message).slice(0, 60) : '未知错误';
+    handText(ctx, msg, W / 2, 340, 13, '#777', 'center');
+    ctx.restore();
+  } catch (ignored) {
+    // 连报错画面都画不出来，就只能靠控制台了
+  }
+  if (typeof console !== 'undefined' && console.error) {
+    console.error('[周一坦克] 运行出错，循环已停止：', err);
+  }
+}
+
+if (typeof window !== 'undefined' && window.addEventListener) {
+  window.addEventListener('error', (ev) => {
+    console.error('[周一坦克] 未捕获的错误：', ev.error || ev.message);
+  });
+}
+
+requestAnimationFrame(loop);
