@@ -140,11 +140,12 @@ class PlayerTank {
     ctx.lineJoin = 'round';
 
     ctx.save();
+    // 履带：跟车身高矮相当，才像坦克
     ctx.fillStyle = '#3a3a3a';
-    ctx.fillRect(-w / 2 + 2, h * 0.10, w - 4, h * 0.26);
+    ctx.fillRect(-w / 2 + 1, h * 0.04, w - 2, h * 0.40);
 
     ctx.fillStyle = bodyColor;
-    sketchRect(ctx, -w / 2, -h * 0.34, w, h * 0.48, 1.6);
+    sketchRect(ctx, -w / 2, -h * 0.44, w, h * 0.46, 1.6);
     ctx.restore();
 
     // 炮管：朝鼠标，不受翻滚影响
