@@ -29,7 +29,22 @@ function wobblyLine(ctx, x1, y1, x2, y2, seg = 4, amp = 1.6) {
   ctx.stroke();
 }
 
-// 潦草矩形：构建单条闭合路径，调用方可以 fill() 再 stroke()
+// 潦草描边：四条独立的手抖线，端点各偏，角上自然留缺口（手绘感来源）
+function sketchStroke(ctx, x, y, w, h, amp = 1.8) {
+  wobblyLine(ctx, x, y, x + w, y, 3, amp);
+  wobblyLine(ctx, x + w, y, x + w, y + h, 3, amp);
+  wobblyLine(ctx, x + w, y + h, x, y + h, 3, amp);
+  wobblyLine(ctx, x, y + h, x, y, 3, amp);
+}
+
+// 潦草矩形：闭合路径用于填充，再叠四段描边保住手绘缺口
+function sketchRect(ctx, x, y, w, h, amp = 1.8) {
+  wobblyRect(ctx, x, y, w, h, amp);
+  ctx.fill();
+  sketchStroke(ctx, x, y, w, h, amp);
+}
+
+// 潦草矩形：构建单条闭合路径，供 fill 使用
 function wobblyRect(ctx, x, y, w, h, amp = 1.8) {
   const corners = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
   const segs = 3;

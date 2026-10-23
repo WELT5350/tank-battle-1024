@@ -34,72 +34,59 @@ class PlayerTank {
     this.x = x; this.y = y;
     this.vx = 0; this.vy = 0;
     this.w = 46; this.h = 26;
-    this.turretAngle = -Math.PI / 2;
-    this.turretSpin = 0;
+    this.aimAngle = -Math.PI / 2;
     this.onGround = true;
     this.jumpsLeft = 2;
     this.hp = 10;
     this.maxHp = 10;
     this.invincible = 0;
-    this.cooldown = 0;
-    this.spinDir = 0;
-    this.moveDir = 0;
     this.hurtFlash = 0;
-  }
-
-  get lift() {
-    const s = Math.abs(this.turretSpin) / MAX_SPIN;
-    if (s < LIFT_THRESHOLD) return 0;
-    return ((s - LIFT_THRESHOLD) / (1 - LIFT_THRESHOLD)) * LIFT_GAIN;
+    this.flying = false;
+    this.flyTimer = 0;
+    this.roll = 0;
   }
 
   update(input) {
-    // 水平
-    this.moveDir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
-    const accel = this.onGround ? 0.9 : 0.35;
-    this.vx += this.moveDir * accel;
-    this.vx *= this.onGround ? 0.82 : 0.97;
+    const ax = (input.right ? 1 : 0) - (input.left ? 1 : 0);
 
-    // 炮管旋转
-    this.spinDir = (input.spinRight ? 1 : 0) - (input.spinLeft ? 1 : 0);
-    if (this.spinDir !== 0) {
-      this.turretSpin = clamp(this.turretSpin + this.spinDir * 0.055, -MAX_SPIN, MAX_SPIN);
+    if (this.flying) {
+      const ay = (input.down ? 1 : 0) - (input.up ? 1 : 0);
+      this.vx = this.vx * 0.93 + ax * 0.85;
+      this.vy = this.vy * 0.93 + ay * 0.85;
+      this.roll += 0.30;
+      this.flyTimer--;
+      if (this.flyTimer <= 0) this.endFlight();
     } else {
-      this.turretSpin *= 0.94;
-      if (Math.abs(this.turretSpin) < 0.004) this.turretSpin = 0;
+      this.vx += ax * (this.onGround ? 0.9 : 0.35);
+      this.vx *= this.onGround ? 0.82 : 0.97;
+      this.vy += GRAVITY;
+      if (!this.onGround) this.vy *= 0.95;
+      this.vy = clamp(this.vy, -6, 16);
+      this.roll *= 0.88;
     }
-    this.turretAngle += this.turretSpin;
 
-    // 竖直：重力 - 升力
-    this.vy += GRAVITY - this.lift;
-    // 空气阻力，让上浮和下坠都是缓慢可控的
-    if (!this.onGround) this.vy *= 0.95;
-    this.vy = clamp(this.vy, -6, 16);
     this.x += this.vx;
     this.y += this.vy;
 
-    // 地面
     const floor = GROUND - this.h / 2;
     if (this.y >= floor) {
       this.y = floor;
-      if (this.vy > 3) this.vy = -this.vy * 0.18; // 落地小弹一下
+      if (this.vy > 3) this.vy = -this.vy * 0.18;
       else this.vy = 0;
-      this.onGround = true;
-      this.jumpsLeft = 2;
+      if (!this.flying) { this.onGround = true; this.jumpsLeft = 2; }
     } else {
       this.onGround = false;
     }
 
-    // 边界
     this.x = clamp(this.x, this.w / 2, W - this.w / 2);
     if (this.y < 40) { this.y = 40; this.vy = Math.max(this.vy, 0); }
 
-    if (this.invincible > 0) this.invincible--;
-    if (this.cooldown > 0) this.cooldown--;
+    if (this.invincible > 0 && !this.flying) this.invincible--;
     if (this.hurtFlash > 0) this.hurtFlash--;
   }
 
   jump() {
+    if (this.flying) return false;
     if (this.jumpsLeft > 0) {
       this.vy = -10.2;
       this.jumpsLeft--;
@@ -109,26 +96,41 @@ class PlayerTank {
     return false;
   }
 
+  canFly() { return !this.flying && this.hp <= 5; }
+
+  startFlight() {
+    if (!this.canFly()) return false;
+    this.flying = true;
+    this.flyTimer = 600;       // 10 秒 @60fps
+    this.invincible = 600;
+    this.jumpsLeft = 2;
+    return true;
+  }
+
+  endFlight() {
+    this.flying = false;
+    this.flyTimer = 0;
+    this.invincible = 0;
+    this.hp = Math.min(this.maxHp, this.hp + (1 + Math.floor(Math.random() * 3)));
+  }
+
   fire() {
-    if (this.cooldown > 0) return null;
-    this.cooldown = 16;
     const speed = 12.5;
-    const bx = this.x + Math.cos(this.turretAngle) * 34;
-    const by = this.y + Math.sin(this.turretAngle) * 34;
-    // 后坐力：把自己往反方向推
-    this.vx -= Math.cos(this.turretAngle) * 3.6;
-    this.vy -= Math.sin(this.turretAngle) * 3.6;
-    return new Bullet(bx, by, Math.cos(this.turretAngle) * speed, Math.sin(this.turretAngle) * speed, 'player');
+    const ox = Math.cos(this.aimAngle) * 30;
+    const oy = Math.sin(this.aimAngle) * 30;
+    const bx = this.x + ox;
+    const by = this.y - this.h * 0.20 + oy;
+    return new Bullet(bx, by, Math.cos(this.aimAngle) * speed, Math.sin(this.aimAngle) * speed, 'player');
   }
 
   damage(n) {
-    if (this.invincible > 0) return;
+    if (this.invincible > 0 || this.flying) return;
     this.hp = Math.max(0, this.hp - n);
     this.hurtFlash = 12;
   }
 
   draw(ctx) {
-    if (this.invincible > 0 && Math.floor(Date.now() / 90) % 2 === 0) return;
+    if (this.invincible > 0 && !this.flying && Math.floor(Date.now() / 90) % 2 === 0) return;
 
     const w = this.w, h = this.h;
     const bodyColor = this.hurtFlash > 0 ? '#e3b7ae' : '#d5d0c2';
@@ -139,19 +141,21 @@ class PlayerTank {
     ctx.strokeStyle = '#1c1c1c';
     ctx.lineJoin = 'round';
 
-    // 履带：一条深色横条
+    // 车身整体：起飞时翻滚
+    ctx.save();
+    if (this.flying) ctx.rotate(this.roll);
+
     ctx.fillStyle = '#3a3a3a';
     ctx.fillRect(-w / 2 + 2, h * 0.10, w - 4, h * 0.26);
 
-    // 车身
     ctx.fillStyle = bodyColor;
-    wobblyRect(ctx, -w / 2, -h * 0.34, w, h * 0.48, 1.6);
-    ctx.fill(); ctx.stroke();
+    sketchRect(ctx, -w / 2, -h * 0.34, w, h * 0.48, 1.6);
+    ctx.restore();
 
-    // 炮管：一根线
+    // 炮管：朝鼠标，不受翻滚影响
     ctx.save();
     ctx.translate(0, -h * 0.20);
-    ctx.rotate(this.turretAngle);
+    ctx.rotate(this.aimAngle);
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(0, 0);
@@ -159,12 +163,12 @@ class PlayerTank {
     ctx.stroke();
     ctx.restore();
 
-    // 炮塔：一个圆
+    // 炮塔
     ctx.fillStyle = '#c9c4b4';
     wobblyCircle(ctx, 0, -h * 0.20, 8, 9, 1.2);
     ctx.fill(); ctx.stroke();
 
-    // 眼睛：一个点
+    // 眼睛
     ctx.fillStyle = '#1c1c1c';
     ctx.beginPath();
     ctx.arc(4, -h * 0.20, 1.8, 0, Math.PI * 2);
@@ -174,7 +178,7 @@ class PlayerTank {
   }
 }
 
-// 职场怪基类
+
 class Enemy {
   constructor(x, y, kind) {
     this.x = x; this.y = y;
@@ -212,8 +216,7 @@ class DemandEnemy extends Enemy {
     ctx.save();
     ctx.lineWidth = 2.2; ctx.strokeStyle = '#1c1c1c';
     scratchFill(ctx, '#f0ece0');
-    wobblyRect(ctx, this.x - this.r, this.y - this.r * 0.7, this.r * 2, this.r * 1.4, 2);
-    ctx.fill(); ctx.stroke();
+    sketchRect(ctx, this.x - this.r, this.y - this.r * 0.7, this.r * 2, this.r * 1.4, 2);
     // 狂躁的眼睛
     ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.arc(this.x - 5, this.y - 2, 3, 0, 7); ctx.fill();
@@ -316,8 +319,7 @@ class Item {
     ctx.save();
     ctx.lineWidth = 2; ctx.strokeStyle = '#1c1c1c';
     scratchFill(ctx, this.kind === 'coffee' ? '#e6d3b8' : '#cfe0c8');
-    wobblyRect(ctx, this.x - this.r, this.y - this.r * 0.8, this.r * 2, this.r * 1.6, 1.8);
-    ctx.fill(); ctx.stroke();
+    sketchRect(ctx, this.x - this.r, this.y - this.r * 0.8, this.r * 2, this.r * 1.6, 1.8);
     handText(ctx, this.kind === 'coffee' ? '咖' : '摸', this.x, this.y, 13, '#333', 'center');
     ctx.restore();
   }
