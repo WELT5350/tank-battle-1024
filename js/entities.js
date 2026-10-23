@@ -71,7 +71,6 @@ class PlayerTank {
     this.hp = MAX_HP;
     this.maxHp = MAX_HP;
     this.invincible = 0;
-    this.hurtFlash = 0;
     this.flying = false;
     this.flyTimer = 0;
     this.ramCd = 0;
@@ -112,7 +111,6 @@ class PlayerTank {
     if (this.y < 40) { this.y = 40; this.vy = Math.max(this.vy, 0); }
 
     if (this.invincible > 0 && !this.flying) this.invincible--;
-    if (this.hurtFlash > 0) this.hurtFlash--;
   }
 
   jump() {
@@ -158,14 +156,13 @@ class PlayerTank {
   damage(n) {
     if (this.invincible > 0 || this.flying) return;
     this.hp = Math.max(0, this.hp - n);
-    this.hurtFlash = 12;
   }
 
   draw(ctx) {
     if (this.invincible > 0 && !this.flying && Math.floor(Date.now() / 90) % 2 === 0) return;
 
     const w = this.w, h = this.h;
-    const bodyColor = this.hurtFlash > 0 ? '#e3b7ae' : '#c6c0ae';
+    const bodyColor = '#c6c0ae';
 
     ctx.save();
     ctx.translate(this.x, this.y);
