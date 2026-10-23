@@ -15,6 +15,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: npm
+
+      - name: 安装开发依赖
+        run: npm ci
+
+      - name: 代码规范
+        run: |
+          npx eslint js tests
+          npx prettier --check js tests index.html preview.html README.md CHANGELOG.md
 
       - name: 语法检查
         run: |

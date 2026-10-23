@@ -3,17 +3,17 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-const ROUND_SECONDS = 90;      // 一局时长
-const TIME_STOP_FRAMES = 300;  // 年假：时间停止 5 秒
-const MERGE_COUNT = 3;         // 几只未读合体
-const MERGE_RADIUS = 50;       // 这几只之间的距离上限，太远不算一坨
-const FLY_RAM_DAMAGE = 3;      // 飞行撞击伤害
+const ROUND_SECONDS = 90; // 一局时长
+const TIME_STOP_FRAMES = 300; // 年假：时间停止 5 秒
+const MERGE_COUNT = 3; // 几只未读合体
+const MERGE_RADIUS = 50; // 这几只之间的距离上限，太远不算一坨
+const FLY_RAM_DAMAGE = 3; // 飞行撞击伤害
 const RAM_COOLDOWN_FRAMES = 18; // 两次撞击间隔，防止贴脸连续判定
 const POT_INTERVAL_FRAMES = 900; // 锅固定 15 秒飞进来一个
-const RING_INTERVAL_FRAMES = 90;  // 电话还活着时，多久响一次
+const RING_INTERVAL_FRAMES = 90; // 电话还活着时，多久响一次
 
 const state = {
-  mode: 'ready',      // ready | playing | over | win
+  mode: 'ready', // ready | playing | over | win
   timeLeft: ROUND_SECONDS,
   kills: 0,
   frame: 0,
@@ -176,7 +176,8 @@ function addShake(amount) {
 function spawnDust(x, y, color = '#888', n = 6) {
   for (let i = 0; i < n; i++) {
     state.particles.push({
-      x, y,
+      x,
+      y,
       vx: rand(-2.2, 2.2),
       vy: rand(-2.6, 0.4),
       life: rand(14, 30),
@@ -229,12 +230,14 @@ function spawnWave() {
 function spawnPot() {
   const difficulty = 1 + (ROUND_SECONDS - state.timeLeft) / 45;
   const fromLeft = Math.random() < 0.5;
-  state.enemies.push(new PotEnemy(
-    fromLeft ? -40 : W + 40,
-    GROUND - 200,
-    (fromLeft ? 1 : -1) * rand(2.0, 2.9) * difficulty,
-    rand(-2.4, -1.4)
-  ));
+  state.enemies.push(
+    new PotEnemy(
+      fromLeft ? -40 : W + 40,
+      GROUND - 200,
+      (fromLeft ? 1 : -1) * rand(2.0, 2.9) * difficulty,
+      rand(-2.4, -1.4)
+    )
+  );
 }
 
 // ---------- 更新 ----------
@@ -309,7 +312,7 @@ function updateTank(frozen) {
   if (!t) return;
 
   if (!t.flying) {
-    t.aimAngle = Math.atan2(state.mouse.y - (t.y - t.h * 0.20), state.mouse.x - t.x);
+    t.aimAngle = Math.atan2(state.mouse.y - (t.y - t.h * 0.2), state.mouse.x - t.x);
   }
   t.update(input);
 
@@ -337,8 +340,11 @@ function ramEnemies(t) {
     e.hurt(FLY_RAM_DAMAGE);
     t.ramCd = RAM_COOLDOWN_FRAMES;
     addShake(1.4);
-    if (e.dead) { state.kills++; killFeedback(e.x, e.y); Telemetry.log('kill', { kind: e.kind, by: 'ram' }); }
-    else spawnDust(e.x, e.y, '#8a6a5a', 6);
+    if (e.dead) {
+      state.kills++;
+      killFeedback(e.x, e.y);
+      Telemetry.log('kill', { kind: e.kind, by: 'ram' });
+    } else spawnDust(e.x, e.y, '#8a6a5a', 6);
   }
 }
 
@@ -348,7 +354,11 @@ function crushFrozenEnemies(t) {
     if (e.dead) continue;
     if (!hitCircle(t, 24, e, e.r)) continue;
     e.hurt(999);
-    if (e.dead) { state.kills++; killFeedback(e.x, e.y); Telemetry.log('kill', { kind: e.kind, by: 'crush' }); }
+    if (e.dead) {
+      state.kills++;
+      killFeedback(e.x, e.y);
+      Telemetry.log('kill', { kind: e.kind, by: 'crush' });
+    }
     addShake(1.2);
   }
 }
@@ -442,7 +452,7 @@ function dropLoot() {
     e.dropDone = true;
 
     if (e.kind === 'boss') {
-      state.items.push(new Item(e.x, e.y, 'leave'));   // 夺命连环 call 必掉年假
+      state.items.push(new Item(e.x, e.y, 'leave')); // 夺命连环 call 必掉年假
     } else if (e.kind === 'meeting' && Math.random() < 0.22) {
       state.items.push(new Item(e.x, e.y, Math.random() < 0.65 ? 'coffee' : 'fish'));
     }
@@ -533,7 +543,10 @@ function updateEffects() {
   }
   state.particles = state.particles.filter((p) => p.life > 0);
 
-  for (const p of state.pops) { p.r += 1.6; p.life--; }
+  for (const p of state.pops) {
+    p.r += 1.6;
+    p.life--;
+  }
   state.pops = state.pops.filter((p) => p.life > 0);
 
   // 基础抖动四档：血越少抖越狠
@@ -583,8 +596,18 @@ function drawBackground() {
 
   ctx.strokeStyle = 'rgba(80,80,80,0.10)';
   ctx.lineWidth = 1;
-  for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-  for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  for (let x = 0; x < W; x += 40) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+  for (let y = 0; y < H; y += 40) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
 
   ctx.strokeStyle = '#1c1c1c';
   ctx.lineWidth = 3;
@@ -610,7 +633,10 @@ function drawBackground() {
 }
 
 function drawHUD() {
-  const bx = 24, by = 22, barW = 250, barH = 18;
+  const bx = 24,
+    by = 22,
+    barW = 250,
+    barH = 18;
   ctx.save();
 
   const t = state.tank;
@@ -706,7 +732,7 @@ function drawDebug() {
     '— 最近事件 —',
   ];
   for (const e of Telemetry.recent(6)) {
-    const extra = e.kind ? ` ${e.kind}` : (e.by ? ` ${e.by}` : '');
+    const extra = e.kind ? ` ${e.kind}` : e.by ? ` ${e.by}` : '';
     lines.push(`  ${e.t}s  ${e.type}${extra}`);
   }
 
@@ -736,7 +762,15 @@ function drawOverlay() {
     handText(ctx, '按 空格 开始', W / 2, 470, 22, '#b5736a', 'center');
   } else if (state.mode === 'over') {
     handText(ctx, '你倒下了', W / 2, 210, 48, '#b5736a', 'center');
-    handText(ctx, `撑过了 ${ROUND_SECONDS - Math.ceil(state.timeLeft)} 秒，干掉了 ${state.kills} 个`, W / 2, 270, 20, '#555', 'center');
+    handText(
+      ctx,
+      `撑过了 ${ROUND_SECONDS - Math.ceil(state.timeLeft)} 秒，干掉了 ${state.kills} 个`,
+      W / 2,
+      270,
+      20,
+      '#555',
+      'center'
+    );
     handText(ctx, '按 R 再来一次', W / 2, 350, 22, '#222', 'center');
   } else if (state.mode === 'paused') {
     handText(ctx, '已暂停', W / 2, 240, 46, '#222', 'center');
@@ -787,9 +821,17 @@ function draw() {
     ctx.save();
     ctx.strokeStyle = 'rgba(40,40,40,.55)';
     ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.arc(m.x, m.y, 7, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(m.x - 11, m.y); ctx.lineTo(m.x - 3, m.y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(m.x + 3, m.y); ctx.lineTo(m.x + 11, m.y); ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, 7, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(m.x - 11, m.y);
+    ctx.lineTo(m.x - 3, m.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(m.x + 3, m.y);
+    ctx.lineTo(m.x + 11, m.y);
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -800,7 +842,10 @@ function draw() {
     ctx.strokeStyle = 'rgba(70,100,130,0.10)';
     ctx.lineWidth = 1;
     for (let y = (state.frame * 2) % 8; y < H; y += 8) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
     }
     ctx.restore();
   }

@@ -126,13 +126,13 @@ const Sfx = (() => {
 
   // ---------- 背景音乐：一段 8 秒的循环 ----------
   const BPM = 92;
-  const STEP = 60 / BPM / 2;          // 八分音符
-  const LOOP_STEPS = 32;              // 四个和弦 × 8 步
+  const STEP = 60 / BPM / 2; // 八分音符
+  const LOOP_STEPS = 32; // 四个和弦 × 8 步
   const CHORDS = [
-    [57, 60, 64],   // Am
-    [53, 57, 60],   // F
-    [48, 52, 55],   // C
-    [55, 59, 62],   // G
+    [57, 60, 64], // Am
+    [53, 57, 60], // F
+    [48, 52, 55], // C
+    [55, 59, 62], // G
   ];
 
   let musicSpeed = 1;
@@ -172,17 +172,29 @@ const Sfx = (() => {
 
     // 低音：每小节头尾各一次
     if (inChord === 0 || inChord === 4) {
-      musicNote(midiToFreq(chord[0] - 12) * pitchScale(), when, STEP * 1.8 / musicSpeed, 0.16, 'sine');
+      musicNote(
+        midiToFreq(chord[0] - 12) * pitchScale(),
+        when,
+        (STEP * 1.8) / musicSpeed,
+        0.16,
+        'sine'
+      );
     }
     // 琶音：弱起，留空拍，避免太吵
     if (inChord !== 3 && inChord !== 7) {
       const note = chord[inChord % chord.length] + 12;
-      musicNote(midiToFreq(note) * pitchScale(), when, STEP * 1.2 / musicSpeed, 0.055, 'triangle');
+      musicNote(
+        midiToFreq(note) * pitchScale(),
+        when,
+        (STEP * 1.2) / musicSpeed,
+        0.055,
+        'triangle'
+      );
     }
   }
 
   function pitchScale() {
-    return 0.55 + 0.45 * musicSpeed;   // 拖慢时音高也跟着塌下去
+    return 0.55 + 0.45 * musicSpeed; // 拖慢时音高也跟着塌下去
   }
 
   function musicTick() {
@@ -229,7 +241,10 @@ const Sfx = (() => {
     toggle() {
       silenced = !silenced;
       if (silenced) {
-        if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+        if (musicTimer) {
+          clearInterval(musicTimer);
+          musicTimer = null;
+        }
       }
       return !silenced;
     },

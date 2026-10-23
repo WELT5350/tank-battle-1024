@@ -46,7 +46,9 @@ const canvasStub = {
 
 const windowHandlers = {};
 const windowStub = {
-  addEventListener: (type, fn) => { windowHandlers[type] = fn; },
+  addEventListener: (type, fn) => {
+    windowHandlers[type] = fn;
+  },
 };
 
 let clock = 1000;
@@ -69,7 +71,7 @@ const source = [
   read('js/game.js'),
   // 把内部符号导出来给测试用
   'globalThis.__game = { state, input, startGame, update, draw, spawnWave, spawnPot, Telemetry,' +
-  '  PlayerTank, DemandEnemy, MeetingEnemy, PotEnemy, CallBoss, Item, Bullet, Sfx };',
+    '  PlayerTank, DemandEnemy, MeetingEnemy, PotEnemy, CallBoss, Item, Bullet, Sfx };',
 ].join('\n');
 
 try {
@@ -80,16 +82,19 @@ try {
 }
 
 const G = sandbox.__game;
-const { state, input } = G;
+const { state } = G;
 
 const key = (k) => {
   clock += 400; // 保证不在双击判定窗口内
   windowHandlers.keydown({ key: k, preventDefault() {} });
 };
-const keyUp = (k) => windowHandlers.keyup && windowHandlers.keyup({ key: k });
 
-const step = (n) => { for (let i = 0; i < (n || 1); i++) G.update(); };
-const clearEnemies = () => { state.enemies.length = 0; };
+const step = (n) => {
+  for (let i = 0; i < (n || 1); i++) G.update();
+};
+const clearEnemies = () => {
+  state.enemies.length = 0;
+};
 const countOf = (kind) => state.enemies.filter((e) => e.kind === kind).length;
 
 // ---------- 场景 ----------
@@ -141,8 +146,11 @@ clearEnemies();
 state.timeStop = 120;
 const timeBefore = state.timeLeft;
 step(2);
-assert('时停时倒计时不动', state.timeLeft === timeBefore,
-  `${timeBefore.toFixed(2)} → ${state.timeLeft.toFixed(2)}`);
+assert(
+  '时停时倒计时不动',
+  state.timeLeft === timeBefore,
+  `${timeBefore.toFixed(2)} → ${state.timeLeft.toFixed(2)}`
+);
 
 // 6. 时停结束后倒计时恢复
 state.timeStop = 0;
@@ -177,12 +185,15 @@ state.enemies.push(prey);
 state.bullets.push(new G.Bullet(500, 539, 0, 0, 'player'));
 step(1);
 assert('击杀会产生波纹', state.pops.length > 0, '波纹=' + state.pops.length);
-assert('波纹会随时间扩大', (function () {
-  const before = state.pops[0] ? state.pops[0].r : 0;
-  step(2);
-  const after = state.pops[0] ? state.pops[0].r : before;
-  return after > before;
-})());
+assert(
+  '波纹会随时间扩大',
+  (function () {
+    const before = state.pops[0] ? state.pops[0].r : 0;
+    step(2);
+    const after = state.pops[0] ? state.pops[0].r : before;
+    return after > before;
+  })()
+);
 
 // 10. 埋点记录
 G.startGame();
@@ -193,8 +204,11 @@ prey2.speed = 0;
 state.enemies.push(prey2);
 state.bullets.push(new G.Bullet(500, 539, 0, 0, 'player'));
 step(1);
-assert('击杀会被记录', G.Telemetry.summary().counts.kill >= 1,
-  'counts=' + JSON.stringify(G.Telemetry.summary().counts));
+assert(
+  '击杀会被记录',
+  G.Telemetry.summary().counts.kill >= 1,
+  'counts=' + JSON.stringify(G.Telemetry.summary().counts)
+);
 assert('埋点有事件累积', G.Telemetry.size > beforeSize);
 
 // 10b. 电话铃只在 boss 活着时响
@@ -221,8 +235,11 @@ assert('boss 死后铃声停止', state.ringTimer === 0, 'ringTimer=' + state.ri
 G.startGame();
 state.tank.hp = 0;
 step(2);
-assert('结束时写入 window.__lastRound', !!(sandbox.window.__lastRound),
-  '结果=' + JSON.stringify((sandbox.window.__lastRound || {}).result));
+assert(
+  '结束时写入 window.__lastRound',
+  !!sandbox.window.__lastRound,
+  '结果=' + JSON.stringify((sandbox.window.__lastRound || {}).result)
+);
 assert('导出数据含 result', (sandbox.window.__lastRound || {}).result === 'over');
 
 // 11b. 无声环境下的音频接口：可以调用，不会崩
@@ -238,15 +255,23 @@ try {
 assert('没有 AudioContext 时音频调用不报错', audioError === null, audioError || '');
 
 const beforeMute = G.Sfx.isMuted();
-const nowOn = G.Sfx.toggle();          // toggle 返回「声音是否开着」
+const nowOn = G.Sfx.toggle(); // toggle 返回「声音是否开着」
 assert('静音开关会翻转', G.Sfx.isMuted() === !beforeMute, `${beforeMute} → ${G.Sfx.isMuted()}`);
 assert('toggle 返回值与静音状态相反', nowOn === !G.Sfx.isMuted());
 
-assert('静音状态下播放不报错', (function () {
-  try { G.Sfx.play('ring'); G.Sfx.startMusic(); } catch (e) { return false; }
-  return true;
-})());
-G.Sfx.toggle();                        // 恢复成不静音
+assert(
+  '静音状态下播放不报错',
+  (function () {
+    try {
+      G.Sfx.play('ring');
+      G.Sfx.startMusic();
+    } catch (err) {
+      return false;
+    }
+    return true;
+  })()
+);
+G.Sfx.toggle(); // 恢复成不静音
 assert('恢复后不再静音', G.Sfx.isMuted() === beforeMute);
 
 // 11c. 阵亡后世界要停住
@@ -266,10 +291,16 @@ assert('阵亡后进入 over', state.mode === 'over', 'mode=' + state.mode);
 const posAtDeath = still.x;
 const ringAtDeath = state.ringTimer;
 step(5);
-assert('阵亡后敌人不再移动', Math.abs(still.x - posAtDeath) < 0.01,
-  `${posAtDeath.toFixed(1)} → ${still.x.toFixed(1)}`);
-assert('阵亡后电话不再响铃', state.ringTimer === ringAtDeath,
-  `${ringAtDeath} → ${state.ringTimer}`);
+assert(
+  '阵亡后敌人不再移动',
+  Math.abs(still.x - posAtDeath) < 0.01,
+  `${posAtDeath.toFixed(1)} → ${still.x.toFixed(1)}`
+);
+assert(
+  '阵亡后电话不再响铃',
+  state.ringTimer === ringAtDeath,
+  `${ringAtDeath} → ${state.ringTimer}`
+);
 assert('阵亡后不再刷新敌人', state.enemies.length === 2, '敌人=' + state.enemies.length);
 
 // 12. 正常游玩不会崩

@@ -6,7 +6,14 @@
   "scripts": {
     "syntax": "node --check js/utils.js && node --check js/entities.js && node --check js/game.js && node --check tests/run.js && node --check tests/game-loop.js",
     "test": "node tests/run.js && node tests/game-loop.js",
-    "check": "npm run syntax && npm run test",
-    "start": "python3 -m http.server 8080"
+    "check": "npm run lint && npm run syntax && npm run test",
+    "start": "python3 -m http.server 8080",
+    "lint": "eslint js tests",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "eslint": "^9.15.0",
+    "prettier": "^3.4.0"
   }
 }

@@ -1,42 +1,57 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>周一坦克 · 打工人解压小游戏</title>
-  <style>
-    html, body {
-      margin: 0; padding: 0; height: 100%;
-      background: #cfcfc8;
-      color: #222;
-      font-family: "Comic Sans MS", "PingFang SC", "Microsoft YaHei", cursive, sans-serif;
-      display: flex; align-items: center; justify-content: center;
-      overflow: hidden;
-    }
-    #wrap { text-align: center; }
-    canvas {
-      display: block;
-      background: #f3f2ec;
-      border: 3px solid #222;
-      box-shadow: 6px 6px 0 rgba(0,0,0,.25);
-      image-rendering: pixelated;
-      cursor: crosshair;
-    }
-    .tip { margin-top: 10px; font-size: 13px; color: #555; line-height: 1.7; }
-    .tip b { color: #111; }
-  </style>
-</head>
-<body>
-  <div id="wrap">
-    <canvas id="game" width="960" height="600"></canvas>
-    <div class="tip">
-      <b>A / D</b> 移动 &nbsp;·&nbsp; <b>空格</b> 跳跃 &nbsp;·&nbsp; <b>鼠标</b> 瞄准 &nbsp;·&nbsp; <b>左键</b> 开炮 &nbsp;·&nbsp; <b>ESC</b> 暂停
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>周一坦克 · 打工人解压小游戏</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #cfcfc8;
+        color: #222;
+        font-family: 'Comic Sans MS', 'PingFang SC', 'Microsoft YaHei', cursive, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      #wrap {
+        text-align: center;
+      }
+      canvas {
+        display: block;
+        background: #f3f2ec;
+        border: 3px solid #222;
+        box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.25);
+        image-rendering: pixelated;
+        cursor: crosshair;
+      }
+      .tip {
+        margin-top: 10px;
+        font-size: 13px;
+        color: #555;
+        line-height: 1.7;
+      }
+      .tip b {
+        color: #111;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="wrap">
+      <canvas id="game" width="960" height="600"></canvas>
+      <div class="tip">
+        <b>A / D</b> 移动 &nbsp;·&nbsp; <b>空格</b> 跳跃 &nbsp;·&nbsp; <b>鼠标</b> 瞄准
+        &nbsp;·&nbsp; <b>左键</b> 开炮 &nbsp;·&nbsp; <b>ESC</b> 暂停
+      </div>
     </div>
-  </div>
-  <script src="js/utils.js"></script>
-  <script src="js/entities.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/telemetry.js"></script>
-  <script src="js/game.js"></script>
-</body>
+    <script src="js/utils.js"></script>
+    <script src="js/entities.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/telemetry.js"></script>
+    <script src="js/game.js"></script>
+  </body>
 </html>

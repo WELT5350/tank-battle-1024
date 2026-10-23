@@ -3,24 +3,26 @@
 const GRAVITY = 0.55;
 
 // 玩法数值，集中在这里方便调
-const MAX_HP = 10;              // 精神状态上限
-const FLY_FRAMES = 600;         // 画饼升天持续帧数（10 秒 @60fps）
+const MAX_HP = 10; // 精神状态上限
+const FLY_FRAMES = 600; // 画饼升天持续帧数（10 秒 @60fps）
 const JUMP_VELOCITY = -14.6;
 const BULLET_SPEED = 12.5;
-const POT_DAMAGE = 2;                                  // 锅碰到扣的血
-const POT_BOUNCE_SPEEDS = [5.4, 4.1, 3.0];             // 每次弹起的初速，逐次递减
+const POT_DAMAGE = 2; // 锅碰到扣的血
+const POT_BOUNCE_SPEEDS = [5.4, 4.1, 3.0]; // 每次弹起的初速，逐次递减
 
 class Bullet {
   constructor(x, y, vx, vy, owner) {
-    this.x = x; this.y = y;
-    this.vx = vx; this.vy = vy;
-    this.owner = owner;      // 'player' | 'enemy'
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.owner = owner; // 'player' | 'enemy'
     this.dead = false;
     this.life = 180;
     this.r = 4;
-    this.homing = false;     // 追踪弹
+    this.homing = false; // 追踪弹
     this.target = null;
-    this.turn = 0.052;       // 每帧最大转向
+    this.turn = 0.052; // 每帧最大转向
   }
   update() {
     if (this.homing && this.target) {
@@ -64,9 +66,12 @@ class Bullet {
 
 class PlayerTank {
   constructor(x, y) {
-    this.x = x; this.y = y;
-    this.vx = 0; this.vy = 0;
-    this.w = 46; this.h = 26;
+    this.x = x;
+    this.y = y;
+    this.vx = 0;
+    this.vy = 0;
+    this.w = 46;
+    this.h = 26;
     this.aimAngle = -Math.PI / 2;
     this.onGround = true;
     this.jumpsLeft = 1;
@@ -85,7 +90,7 @@ class PlayerTank {
       const ay = (input.down ? 1 : 0) - (input.up ? 1 : 0);
       this.vx = this.vx * 0.93 + ax * 0.85;
       this.vy = this.vy * 0.93 + ay * 0.85;
-      this.aimAngle += 0.36;   // 炮管高速旋转
+      this.aimAngle += 0.36; // 炮管高速旋转
       this.flyTimer--;
       if (this.flyTimer <= 0) this.endFlight();
     } else {
@@ -94,7 +99,7 @@ class PlayerTank {
       this.vy += GRAVITY;
       if (!this.onGround) this.vy *= 0.95;
       this.vy = clamp(this.vy, -20, 16);
-      }
+    }
 
     this.x += this.vx;
     this.y += this.vy;
@@ -104,13 +109,19 @@ class PlayerTank {
       this.y = floor;
       if (this.vy > 3) this.vy = -this.vy * 0.18;
       else this.vy = 0;
-      if (!this.flying) { this.onGround = true; this.jumpsLeft = 1; }
+      if (!this.flying) {
+        this.onGround = true;
+        this.jumpsLeft = 1;
+      }
     } else {
       this.onGround = false;
     }
 
     this.x = clamp(this.x, this.w / 2, W - this.w / 2);
-    if (this.y < 40) { this.y = 40; this.vy = Math.max(this.vy, 0); }
+    if (this.y < 40) {
+      this.y = 40;
+      this.vy = Math.max(this.vy, 0);
+    }
 
     if (this.invincible > 0 && !this.flying) this.invincible--;
   }
@@ -126,7 +137,9 @@ class PlayerTank {
     return false;
   }
 
-  canFly() { return !this.flying && this.hp <= 3; }
+  canFly() {
+    return !this.flying && this.hp <= 3;
+  }
 
   startFlight() {
     if (!this.canFly()) return false;
@@ -151,8 +164,14 @@ class PlayerTank {
     const ox = Math.cos(this.aimAngle) * 30;
     const oy = Math.sin(this.aimAngle) * 30;
     const bx = this.x + ox;
-    const by = this.y - this.h * 0.20 + oy;
-    return new Bullet(bx, by, Math.cos(this.aimAngle) * speed, Math.sin(this.aimAngle) * speed, 'player');
+    const by = this.y - this.h * 0.2 + oy;
+    return new Bullet(
+      bx,
+      by,
+      Math.cos(this.aimAngle) * speed,
+      Math.sin(this.aimAngle) * speed,
+      'player'
+    );
   }
 
   damage(n) {
@@ -163,7 +182,8 @@ class PlayerTank {
   draw(ctx) {
     if (this.invincible > 0 && !this.flying && Math.floor(Date.now() / 90) % 2 === 0) return;
 
-    const w = this.w, h = this.h;
+    const w = this.w,
+      h = this.h;
     const bodyColor = '#c6c0ae';
 
     ctx.save();
@@ -178,12 +198,12 @@ class PlayerTank {
     ctx.fillRect(-w / 2, h * 0.04, w, h * 0.52);
 
     ctx.fillStyle = bodyColor;
-    sketchRect(ctx, -w * 0.30, -h * 0.40, w * 0.60, h * 0.44, 1.6);
+    sketchRect(ctx, -w * 0.3, -h * 0.4, w * 0.6, h * 0.44, 1.6);
     ctx.restore();
 
     // 炮管：朝鼠标，不受翻滚影响
     ctx.save();
-    ctx.translate(0, -h * 0.20);
+    ctx.translate(0, -h * 0.2);
     ctx.rotate(this.aimAngle);
     ctx.lineWidth = 4.4;
     ctx.beginPath();
@@ -194,23 +214,24 @@ class PlayerTank {
 
     // 炮塔
     ctx.fillStyle = '#b3ad9b';
-    wobblyCircle(ctx, 0, -h * 0.20, 6.2, 9, 1.0);
-    ctx.fill(); ctx.stroke();
+    wobblyCircle(ctx, 0, -h * 0.2, 6.2, 9, 1.0);
+    ctx.fill();
+    ctx.stroke();
 
     // 眼睛
     ctx.fillStyle = '#1c1c1c';
     ctx.beginPath();
-    ctx.arc(3.2, -h * 0.20, 1.5, 0, Math.PI * 2);
+    ctx.arc(3.2, -h * 0.2, 1.5, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
   }
 }
 
-
 class Enemy {
   constructor(x, y, kind) {
-    this.x = x; this.y = y;
+    this.x = x;
+    this.y = y;
     this.kind = kind;
     this.dead = false;
     this.r = 16;
@@ -248,16 +269,25 @@ class DemandEnemy extends Enemy {
   }
   draw(ctx) {
     ctx.save();
-    ctx.lineWidth = 2.2; ctx.strokeStyle = '#1c1c1c';
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = '#1c1c1c';
     scratchFill(ctx, '#f0ece0');
     sketchRect(ctx, this.x - this.r, this.y - this.r * 0.7, this.r * 2, this.r * 1.4, 2);
     // 狂躁的眼睛
     ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(this.x - 5, this.y - 2, 3, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.arc(this.x + 5, this.y - 2, 3, 0, 7); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(this.x - 5, this.y - 2, 3, 0, 7);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(this.x + 5, this.y - 2, 3, 0, 7);
+    ctx.fill();
     ctx.fillStyle = '#111';
-    ctx.beginPath(); ctx.arc(this.x - 5, this.y - 2, 1.4, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.arc(this.x + 5, this.y - 2, 1.4, 0, 7); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(this.x - 5, this.y - 2, 1.4, 0, 7);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(this.x + 5, this.y - 2, 1.4, 0, 7);
+    ctx.fill();
     handText(ctx, '未读', this.x + this.labelOff, this.y - this.r - 9, 11, '#8a6a5a', 'center');
     ctx.restore();
   }
@@ -288,13 +318,21 @@ class MeetingEnemy extends Enemy {
   }
   draw(ctx) {
     ctx.save();
-    ctx.lineWidth = 2.2; ctx.strokeStyle = '#1c1c1c';
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = '#1c1c1c';
     scratchFill(ctx, '#f0ece0');
     wobblyCircle(ctx, this.x, this.y, this.r, 9, 2);
-    ctx.fill(); ctx.stroke();
+    ctx.fill();
+    ctx.stroke();
     // 时钟指针
-    ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x, this.y - 9); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + 7, this.y + 3); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y);
+    ctx.lineTo(this.x, this.y - 9);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y);
+    ctx.lineTo(this.x + 7, this.y + 3);
+    ctx.stroke();
     handText(ctx, '催', this.x, this.y + this.r + 12, 14, '#555', 'center');
     ctx.restore();
   }
@@ -305,7 +343,8 @@ class PotEnemy extends Enemy {
   constructor(x, y, vx, vy) {
     super(x, y, 'pot');
     this.r = 19;
-    this.vx = vx; this.vy = vy;
+    this.vx = vx;
+    this.vy = vy;
     this.bounced = false;
     this.settled = false;
     this.restLife = 0;
@@ -327,7 +366,7 @@ class PotEnemy extends Enemy {
     }
 
     // 弹跳阶段用较缓的重力，弹得慢一点，不会一下子砸下来
-    this.vy += this.bounced ? GRAVITY * 0.50 : GRAVITY * 0.10;
+    this.vy += this.bounced ? GRAVITY * 0.5 : GRAVITY * 0.1;
     this.x += this.vx;
     this.y += this.vy;
 
@@ -359,9 +398,17 @@ class PotEnemy extends Enemy {
 
     // 地面落点阴影：越接近地面越大越深，提前告诉玩家要落在哪
     const alt = clamp((GROUND - this.y) / 240, 0, 1);
-    ctx.fillStyle = `rgba(60,60,60,${0.10 + (1 - alt) * 0.18})`;
+    ctx.fillStyle = `rgba(60,60,60,${0.1 + (1 - alt) * 0.18})`;
     ctx.beginPath();
-    ctx.ellipse(this.x, GROUND - 2, this.r * (1.4 - alt * 0.5), 5 * (1.4 - alt * 0.5), 0, 0, Math.PI * 2);
+    ctx.ellipse(
+      this.x,
+      GROUND - 2,
+      this.r * (1.4 - alt * 0.5),
+      5 * (1.4 - alt * 0.5),
+      0,
+      0,
+      Math.PI * 2
+    );
     ctx.fill();
 
     ctx.lineWidth = 2.4;
@@ -369,7 +416,8 @@ class PotEnemy extends Enemy {
     scratchFill(ctx, '#f0ece0');
     const r = this.settled ? this.r * 0.94 : this.r;
     wobblyCircle(ctx, this.x, this.y, r, 8, 2);
-    ctx.fill(); ctx.stroke();
+    ctx.fill();
+    ctx.stroke();
     handText(ctx, '锅', this.x, this.y + 1, 15, '#333', 'center');
     ctx.restore();
   }
@@ -473,7 +521,10 @@ class CallBoss extends Enemy {
 
     // 血条
     ctx.lineWidth = 1.6;
-    const bw = 48, bh = 5, bx = -24, by = -36;
+    const bw = 48,
+      bh = 5,
+      bx = -24,
+      by = -36;
     ctx.strokeRect(bx, by, bw, bh);
     ctx.fillStyle = '#b5736a';
     ctx.fillRect(bx + 1, by + 1, (bw - 2) * clamp(this.hp / this.maxHp, 0, 1), bh - 2);
@@ -483,13 +534,13 @@ class CallBoss extends Enemy {
 
     ctx.restore();
   }
-
 }
 
 // 道具
 class Item {
   constructor(x, y, kind) {
-    this.x = x; this.y = y;
+    this.x = x;
+    this.y = y;
     this.kind = kind; // 'coffee' | 'fish'
     this.r = kind === 'leave' ? 17 : 13;
     this.dead = false;
@@ -500,7 +551,10 @@ class Item {
     this.age++;
     this.vy += GRAVITY * 0.6;
     this.y += this.vy;
-    if (this.y > GROUND - this.r) { this.y = GROUND - this.r; this.vy = 0; }
+    if (this.y > GROUND - this.r) {
+      this.y = GROUND - this.r;
+      this.vy = 0;
+    }
     if (this.age > 600) this.dead = true;
   }
   draw(ctx) {
@@ -523,7 +577,16 @@ class Item {
   drawCup(ctx) {
     scratchFill(ctx, '#e6d3b8');
     // 上宽下窄的杯身
-    sketchPoly(ctx, [[-7, -7], [7, -7], [4.6, 8.5], [-4.6, 8.5]], 1.0);
+    sketchPoly(
+      ctx,
+      [
+        [-7, -7],
+        [7, -7],
+        [4.6, 8.5],
+        [-4.6, 8.5],
+      ],
+      1.0
+    );
     ctx.fill();
     ctx.stroke();
 
@@ -554,13 +617,32 @@ class Item {
   drawFish(ctx) {
     scratchFill(ctx, '#cfe0c8');
     // 身体
-    sketchPoly(ctx, [[-10, 0], [-4, -6.4], [4, -6.4], [10, 0], [4, 6.4], [-4, 6.4]], 1.0);
+    sketchPoly(
+      ctx,
+      [
+        [-10, 0],
+        [-4, -6.4],
+        [4, -6.4],
+        [10, 0],
+        [4, 6.4],
+        [-4, 6.4],
+      ],
+      1.0
+    );
     ctx.fill();
     ctx.stroke();
 
     // 尾巴
     scratchFill(ctx, '#cfe0c8');
-    sketchPoly(ctx, [[10, 0], [16.5, -5.4], [16.5, 5.4]], 1.1);
+    sketchPoly(
+      ctx,
+      [
+        [10, 0],
+        [16.5, -5.4],
+        [16.5, 5.4],
+      ],
+      1.1
+    );
     ctx.fill();
     ctx.stroke();
 
@@ -601,8 +683,10 @@ class Item {
 
     // 两个挂环
     ctx.beginPath();
-    ctx.moveTo(-4, -7.5); ctx.lineTo(-4, -10.5);
-    ctx.moveTo(4, -7.5); ctx.lineTo(4, -10.5);
+    ctx.moveTo(-4, -7.5);
+    ctx.lineTo(-4, -10.5);
+    ctx.moveTo(4, -7.5);
+    ctx.lineTo(4, -10.5);
     ctx.stroke();
 
     // 日期小格
