@@ -60,7 +60,7 @@ class PlayerTank {
       this.vx *= this.onGround ? 0.82 : 0.97;
       this.vy += GRAVITY;
       if (!this.onGround) this.vy *= 0.95;
-      this.vy = clamp(this.vy, -6, 16);
+      this.vy = clamp(this.vy, -20, 16);
       }
 
     this.x += this.vx;
@@ -86,7 +86,7 @@ class PlayerTank {
   jump() {
     if (this.flying) return false;
     if (this.jumpsLeft > 0) {
-      this.vy = -10.2;
+      this.vy = -14.6;
       this.jumpsLeft--;
       this.onGround = false;
       return true;
