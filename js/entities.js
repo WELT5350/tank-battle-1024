@@ -294,6 +294,90 @@ class PotEnemy extends Enemy {
   }
 }
 
+// 夺命连环 call：三只未读攒够了合体，15 血、攻击 3
+class CallBoss extends Enemy {
+  constructor(x, y) {
+    super(x, y, 'boss');
+    this.r = 26;
+    this.hp = 15;
+    this.maxHp = 15;
+    this.speed = 1.35;
+    this.vx = 0;
+    this.hitCd = 0;
+    this.flash = 0;
+    this.label = '夺命连环call';
+  }
+  update(player) {
+    this.age++;
+    const dir = Math.sign(player.x - this.x) || 1;
+    this.vx = lerp(this.vx, dir * this.speed, 0.06);
+    this.x += this.vx;
+    this.y = GROUND - this.r + Math.sin(this.age * 0.12) * 3;
+    if (this.hitCd > 0) this.hitCd--;
+    if (this.flash > 0) this.flash--;
+    if (this.hitCd <= 0 && hitCircle(this, this.r + 2, player, 24)) {
+      player.damage(3);
+      this.hitCd = 55;
+      this.vx *= -0.7;
+    }
+    if (this.x < -60 || this.x > W + 60) this.dead = true;
+  }
+  hurt(n) {
+    this.hp -= n;
+    this.flash = 6;
+    if (this.hp <= 0) this.dead = true;
+  }
+  draw(ctx) {
+    const shakeX = this.flash > 0 ? rand(-2, 2) : 0;
+    ctx.save();
+    ctx.translate(shakeX, 0);
+    ctx.lineWidth = 2.8;
+    ctx.strokeStyle = '#1c1c1c';
+
+    // 身体
+    ctx.fillStyle = this.flash > 0 ? '#e3b7ae' : '#efe9dc';
+    sketchRect(ctx, this.x - this.r, this.y - this.r * 0.66, this.r * 2, this.r * 1.32, 2.4);
+
+    // 三个小眼睛（未读合体的痕迹）
+    ctx.fillStyle = '#f3f2ec';
+    for (const dx of [-12, 0, 12]) {
+      ctx.beginPath(); ctx.arc(this.x + dx, this.y - 4, 4.6, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#1c1c1c'; ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.arc(this.x + dx + 0.8, this.y - 4, 1.7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f3f2ec';
+    }
+
+    // 来电波纹：身体两侧的振铃
+    ctx.strokeStyle = '#8a6a5a';
+    ctx.lineWidth = 2;
+    const ringPhase = (this.age % 30) / 30;
+    for (let i = 0; i < 2; i++) {
+      const rr = 6 + i * 7 + ringPhase * 9;
+      ctx.globalAlpha = 1 - ringPhase * 0.8;
+      ctx.beginPath();
+      ctx.arc(this.x - this.r - 4, this.y - 2, rr, Math.PI * 0.55, Math.PI * 1.45);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(this.x + this.r + 4, this.y - 2, rr, Math.PI * 1.55, Math.PI * 0.45);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // 血条
+    ctx.strokeStyle = '#1c1c1c';
+    ctx.lineWidth = 1.6;
+    const bw = this.r * 2, bh = 5;
+    const bx = this.x - this.r, by = this.y - this.r * 0.66 - 20;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = '#b5736a';
+    ctx.fillRect(bx + 1, by + 1, (bw - 2) * clamp(this.hp / this.maxHp, 0, 1), bh - 2);
+
+    handText(ctx, this.label, this.x, this.y - this.r * 0.66 - 32, 12, '#8a6a5a', 'center');
+    ctx.restore();
+  }
+}
+
 // 道具
 class Item {
   constructor(x, y, kind) {

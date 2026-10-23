@@ -235,11 +235,20 @@ function update() {
       for (const e of state.enemies) {
         if (e.dead) continue;
         if (hitCircle(b, b.r, e, e.r)) {
-          e.dead = true; b.dead = true; state.kills++;
-          spawnDust(e.x, e.y, '#8a6a5a', 10);
-          addShake(1.2);
-          if (Math.random() < 0.22) {
-            state.items.push(new Item(e.x, e.y, Math.random() < 0.65 ? 'coffee' : 'fish'));
+          b.dead = true;
+          if (typeof e.hurt === 'function') {
+            e.hurt(1);
+            spawnDust(b.x, b.y, '#8a6a5a', 4);
+          } else {
+            e.dead = true;
+          }
+          if (e.dead) {
+            state.kills++;
+            spawnDust(e.x, e.y, '#8a6a5a', 10);
+            addShake(1.2);
+            if (Math.random() < 0.22) {
+              state.items.push(new Item(e.x, e.y, Math.random() < 0.65 ? 'coffee' : 'fish'));
+            }
           }
           break;
         }
@@ -260,6 +269,7 @@ function update() {
     if (e.kind === 'demand' && t) e.update(t);
     else if (e.kind === 'meeting' && t) e.update(t, (b) => newBullets.push(b));
     else if (e.kind === 'pot' && t) e.update(t);
+    else if (e.kind === 'boss' && t) e.update(t);
     if (e.kind === 'demand' && e.dead && t) {
       addShake(2.4);
       spawnDust(e.x, e.y, '#b5736a', 10);
@@ -267,6 +277,20 @@ function update() {
   }
   state.bullets.push(...newBullets);
   state.enemies = state.enemies.filter((e) => !e.dead);
+
+  // 未读攒够了就合体成夺命连环 call
+  const unread = state.enemies.filter((e) => e.kind === 'demand');
+  if (unread.length >= 3) {
+    const three = unread.slice(0, 3);
+    const cx = three.reduce((a, e) => a + e.x, 0) / 3;
+    const cy = three.reduce((a, e) => a + e.y, 0) / 3;
+    for (const e of three) e.dead = true;
+    state.enemies = state.enemies.filter((e) => !e.dead);
+    state.enemies.push(new CallBoss(clamp(cx, 60, W - 60), cy));
+    state.message = '未读攒够了——夺命连环call！';
+    addShake(3);
+    spawnDust(cx, cy, '#8a6a5a', 16);
+  }
 
   for (const it of state.items) it.update();
   for (const it of state.items) {
