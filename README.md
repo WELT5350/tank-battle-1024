@@ -75,7 +75,7 @@ python3 -m http.server 8080
 
 ### 隐藏机制三：时间停止
 
-捡起年假后，**全世界静止 10 秒**：
+捡起年假后，**全世界静止 5 秒**：
 
 - 倒计时冻结
 - 所有怪物、敌方子弹全部不动
@@ -85,6 +85,8 @@ python3 -m http.server 8080
 ## 架构
 
 纯前端，原生 JavaScript（经典脚本，无构建步骤），图形全部 Canvas 绘制，无外部素材。
+
+[![CI](https://github.com/WELT5350/tank-battle-1024/actions/workflows/ci.yml/badge.svg)](https://github.com/WELT5350/tank-battle-1024/actions/workflows/ci.yml)
 
 ```
 index.html        入口，640×600 画布 + 样式
@@ -137,6 +139,22 @@ ready ──空格──> playing ──ESC──> paused
 | `MERGE_COUNT` | game.js | 合体需要几只未读 |
 | `FLY_RAM_DAMAGE` | game.js | 飞行撞击伤害 |
 | `RAM_COOLDOWN_FRAMES` | game.js | 飞行撞击冷却 |
+
+## 测试
+
+没有第三方依赖，用 Node 自带能力跑。
+
+```bash
+npm run check     # 语法 + 逻辑自测
+npm run test      # 只跑逻辑自测
+npm test          # 同上
+```
+
+`tests/run.js` 把 `utils.js` 和 `entities.js` 拼起来丢进 `vm` 里跑，**只测纯逻辑**（数学、碰撞、血量、跳高、追踪弹转向、锅的弹跳与静置），不碰 Canvas。
+
+另外还会检查：`index.html` 引用的脚本都存在、没有遗留 `console.log` / `debugger`、关键常量仍然定义着。
+
+CI 在每次 push 到 `main` 和每个 PR 上自动跑这套检查（`.github/workflows/ci.yml`）。
 
 ## 开发规范
 
