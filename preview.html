@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>周一坦克 · 美术预览</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; background: #dedcd4;
+    display: block;
+  }
+  canvas {
+    background: #f3f2ec;
+    border: 2.5px solid #1c1c1c;
+    display: block;
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+<canvas id="game" width="1080" height="1320"></canvas>
+
+<script src="js/utils.js"></script>
+<script src="js/entities.js"></script>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// 逻辑坐标系 600 × 733，GROUND 固定在 554
+const S = 1.8;
+ctx.scale(S, S);
+const LW = 600, LH = 733;
+
+ctx.fillStyle = '#f3f2ec';
+ctx.fillRect(0, 0, LW, LH);
+
+// 地面
+ctx.strokeStyle = '#1c1c1c';
+ctx.lineWidth = 2.6;
+wobblyLine(ctx, 0, GROUND, LW, GROUND, 10, 2);
+
+function label(text, x, y, size) {
+  handText(ctx, text, x, y, size || 12, '#8a6a5a', 'center');
+}
+
+handText(ctx, '周一坦克 · 全部美术', LW / 2, 44, 24, '#222', 'center');
+handText(ctx, '坦克 / 三类职场怪 / 合体 boss / 子弹 / 道具', LW / 2, 72, 12, '#999', 'center');
+
+// ================= 空中 =================
+const meeting = new MeetingEnemy(110, 170);
+meeting.draw(ctx);
+label('周会通知（空中骚扰）', 110, 218);
+
+const pb = new Bullet(300, 148, 0, 0, 'player');
+pb.draw(ctx);
+label('玩家子弹', 300, 176);
+
+const eb = new Bullet(300, 210, 0, 0, 'enemy');
+eb.draw(ctx);
+label('敌方子弹', 300, 238);
+
+const hb = new Bullet(430, 176, 0, 0, 'enemy');
+hb.homing = true;
+hb.draw(ctx);
+label('追踪弹', 430, 204);
+
+// ================= 道具 =================
+const coffee = new Item(110, 320, 'coffee');
+coffee.draw(ctx);
+label('咖啡', 110, 356);
+label('回 3 点', 110, 372);
+
+const fish = new Item(110, 450, 'fish');
+fish.draw(ctx);
+label('摸鱼卡', 110, 486);
+label('无敌 3 秒', 110, 502);
+
+const leave = new Item(280, 390, 'leave');
+leave.draw(ctx);
+label('一天年假', 280, 428);
+label('时间停止 10 秒', 280, 444);
+
+// ================= 从天上掉下来的锅 =================
+const pot = new PotEnemy(500, 350, 0, 0);
+pot.draw(ctx);
+label('隔壁的锅（缓慢飘落）', 500, 400);
+label('地面阴影提示落点', 500, 416);
+
+// ================= 地面 =================
+const tank = new PlayerTank(95, GROUND - 26);
+tank.aimAngle = -0.6;
+tank.draw(ctx);
+label('坦克', 95, GROUND + 30);
+
+const unread = new DemandEnemy(240, GROUND - 16);
+unread.labelOff = 0;
+unread.draw(ctx);
+label('未读（地面直冲）', 240, GROUND + 30);
+
+const boss = new CallBoss(490, GROUND - 26);
+boss.age = 10;
+boss.draw(ctx);
+label('夺命连环 call', 490, GROUND + 56);
+label('3 只未读合体 · 15 血 · 攻击 3', 490, GROUND + 72);
+</script>
+</body>
+</html>
