@@ -197,6 +197,26 @@ assert('击杀会被记录', G.Telemetry.summary().counts.kill >= 1,
   'counts=' + JSON.stringify(G.Telemetry.summary().counts));
 assert('埋点有事件累积', G.Telemetry.size > beforeSize);
 
+// 10b. 电话铃只在 boss 活着时响
+G.startGame();
+clearEnemies();
+state.ringTimer = 0;
+step(1);
+assert('没有 boss 时不响铃', state.ringTimer === 0, 'ringTimer=' + state.ringTimer);
+
+const ringingBoss = new G.CallBoss(600, 528);
+state.enemies.push(ringingBoss);
+state.ringTimer = 0;
+step(1);
+assert('boss 在场时开始响铃', state.ringTimer > 0, 'ringTimer=' + state.ringTimer);
+const ticked = state.ringTimer;
+step(1);
+assert('响过之后开始倒数', state.ringTimer < ticked, `${ticked} → ${state.ringTimer}`);
+
+ringingBoss.hurt(999);
+step(1);
+assert('boss 死后铃声停止', state.ringTimer === 0, 'ringTimer=' + state.ringTimer);
+
 // 11. 一局结束会导出数据
 G.startGame();
 state.tank.hp = 0;
