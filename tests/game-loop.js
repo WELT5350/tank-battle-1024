@@ -65,9 +65,10 @@ const source = [
   read('js/utils.js'),
   read('js/entities.js'),
   read('js/audio.js'),
+  read('js/telemetry.js'),
   read('js/game.js'),
   // 把内部符号导出来给测试用
-  'globalThis.__game = { state, input, startGame, update, draw, spawnWave, spawnPot,' +
+  'globalThis.__game = { state, input, startGame, update, draw, spawnWave, spawnPot, Telemetry,' +
   '  PlayerTank, DemandEnemy, MeetingEnemy, PotEnemy, CallBoss, Item, Bullet };',
 ].join('\n');
 
@@ -183,7 +184,28 @@ assert('波纹会随时间扩大', (function () {
   return after > before;
 })());
 
-// 10. 正常游玩不会崩
+// 10. 埋点记录
+G.startGame();
+clearEnemies();
+const beforeSize = G.Telemetry.size;
+const prey2 = new G.DemandEnemy(500, 539);
+prey2.speed = 0;
+state.enemies.push(prey2);
+state.bullets.push(new G.Bullet(500, 539, 0, 0, 'player'));
+step(1);
+assert('击杀会被记录', G.Telemetry.summary().counts.kill >= 1,
+  'counts=' + JSON.stringify(G.Telemetry.summary().counts));
+assert('埋点有事件累积', G.Telemetry.size > beforeSize);
+
+// 11. 一局结束会导出数据
+G.startGame();
+state.tank.hp = 0;
+step(2);
+assert('结束时写入 window.__lastRound', !!(sandbox.window.__lastRound),
+  '结果=' + JSON.stringify((sandbox.window.__lastRound || {}).result));
+assert('导出数据含 result', (sandbox.window.__lastRound || {}).result === 'over');
+
+// 12. 正常游玩不会崩
 G.startGame();
 state.timeLeft = 90;
 let crashed = null;
