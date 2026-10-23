@@ -105,7 +105,7 @@ window.addEventListener('keydown', (e) => {
         state.message = '画饼升天！10 秒无敌';
         addShake(2.4);
       } else if (!t.flying && t.hp > 5) {
-        state.message = '血量高于 5，飞不起来';
+        state.message = '血量高于 3，飞不起来';
       }
     } else if (t.jump()) {
       spawnDust(t.x, t.y + 12, '#999');
