@@ -6,6 +6,7 @@ const ctx = canvas.getContext('2d');
 const ROUND_SECONDS = 90;      // 一局时长
 const TIME_STOP_FRAMES = 300;  // 年假：时间停止 5 秒
 const MERGE_COUNT = 3;         // 几只未读合体
+const MERGE_RADIUS = 78;       // 这几只之间的距离上限，太远不算一坨
 const FLY_RAM_DAMAGE = 3;      // 飞行撞击伤害
 const RAM_COOLDOWN_FRAMES = 18; // 两次撞击间隔，防止贴脸连续判定
 
@@ -241,6 +242,19 @@ function update() {
     }
   }
 
+  // 时停期间玩家可以靠撞击清场，否则碰到敌人完全没有反馈
+  if (t && frozen) {
+    for (const e of state.enemies) {
+      if (e.dead) continue;
+      if (hitCircle(t, 24, e, e.r)) {
+        e.hurt(999);
+        if (e.dead) state.kills++;
+        spawnDust(e.x, e.y, '#8a6a5a', 12);
+        addShake(1.2);
+      }
+    }
+  }
+
   for (const b of state.bullets) { if (!(frozen && b.owner === 'enemy')) b.update(); }
   for (const b of state.bullets) {
     if (b.dead) continue;
@@ -311,20 +325,34 @@ function update() {
   state.enemies = state.enemies.filter((e) => !e.dead);
 
   // 未读攒够了就合体成夺命连环 call
-  // 只统计屏幕上看得见的未读，否则玩家只会看到 2 只就突然合体
+  // 只统计屏幕上看得见的未读
   const unread = state.enemies.filter(
-    (e) => e.kind === 'demand' && e.x > 30 && e.x < W - 30
+    (e) => e.kind === 'demand' && !e.dead && e.x > 30 && e.x < W - 30
   );
+
+  // 必须挤在一起才合体：以每只为圆心找邻居，凑够就合并最近的那几只
   if (unread.length >= MERGE_COUNT) {
-    const picked = unread.slice(0, MERGE_COUNT);
-    const cx = picked.reduce((a, e) => a + e.x, 0) / MERGE_COUNT;
-    const cy = picked.reduce((a, e) => a + e.y, 0) / MERGE_COUNT;
-    for (const e of picked) e.dead = true;
-    state.enemies = state.enemies.filter((e) => !e.dead);
-    state.enemies.push(new CallBoss(clamp(cx, 60, W - 60), cy));
-    state.message = '未读攒够了——夺命连环call！';
-    addShake(3);
-    spawnDust(cx, cy, '#8a6a5a', 16);
+    let picked = null;
+    for (const anchor of unread) {
+      const near = unread
+        .filter((e) => e !== anchor && dist(anchor, e) <= MERGE_RADIUS)
+        .sort((a, b) => dist(anchor, a) - dist(anchor, b));
+      if (near.length + 1 >= MERGE_COUNT) {
+        picked = [anchor, ...near.slice(0, MERGE_COUNT - 1)];
+        break;
+      }
+    }
+
+    if (picked) {
+      const cx = picked.reduce((a, e) => a + e.x, 0) / MERGE_COUNT;
+      const cy = picked.reduce((a, e) => a + e.y, 0) / MERGE_COUNT;
+      for (const e of picked) e.dead = true;
+      state.enemies = state.enemies.filter((e) => !e.dead);
+      state.enemies.push(new CallBoss(clamp(cx, 60, W - 60), cy));
+      state.message = '未读挤成一堆——夺命连环call！';
+      addShake(3);
+      spawnDust(cx, cy, '#8a6a5a', 16);
+    }
   }
 
   for (const it of state.items) it.update();
